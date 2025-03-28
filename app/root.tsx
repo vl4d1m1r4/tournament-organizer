@@ -4,25 +4,38 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  json,
+  useLoaderData,
 } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+import { LoaderFunctionArgs } from "@remix-run/node";
+import { createBrowserClient } from "@supabase/auth-helpers-remix";
+import { useState } from "react";
+import { createSupabaseServerClient } from "./utils/supabase.server";
+import styles from "./styles/global.css?url";
 
-import "./tailwind.css";
+export const links = () => [{ rel: "stylesheet", href: styles }];
 
-export const links: LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-  },
-];
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const env = {
+    SUPABASE_URL: process.env.SUPABASE_URL!,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY!,
+  };
 
-export function Layout({ children }: { children: React.ReactNode }) {
+  const response = new Response();
+  const supabase = createSupabaseServerClient({ request, response });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return json({ env, user }, { headers: response.headers });
+};
+
+export default function App() {
+  const { env, user } = useLoaderData<typeof loader>();
+  const [supabase] = useState(() =>
+    createBrowserClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY)
+  );
+
   return (
     <html lang="en">
       <head>
@@ -32,14 +45,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <header>
+          <nav>
+            <a href="/">Basketball Tournament</a>
+            <div>
+              <a href="/tournaments">Tournaments</a>
+              {user ? (
+                <a href="/admin/dashboard">Admin Dashboard</a>
+              ) : (
+                <a href="/login">Admin Login</a>
+              )}
+            </div>
+          </nav>
+        </header>
+        <main>
+          <Outlet context={{ supabase, user }} />
+        </main>
+        <footer>
+          <p>© {new Date().getFullYear()} Basketball Tournament App</p>
+        </footer>
         <ScrollRestoration />
         <Scripts />
       </body>
     </html>
   );
-}
-
-export default function App() {
-  return <Outlet />;
 }
