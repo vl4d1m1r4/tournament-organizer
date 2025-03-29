@@ -60,6 +60,8 @@ export interface Database {
           id: number;
           tournament_id: number;
           category_id: number;
+          group_name: string | null;
+          is_playoff: boolean;
           team1: string;
           team2: string;
           score1: number | null;
@@ -73,6 +75,8 @@ export interface Database {
           id?: number;
           tournament_id: number;
           category_id: number;
+          group_name: string | null;
+          is_playoff: boolean;
           team1: string;
           team2: string;
           score1?: number | null;
@@ -86,6 +90,8 @@ export interface Database {
           id?: number;
           tournament_id?: number;
           category_id?: number;
+          group_name: string | null;
+          is_playoff: boolean;
           team1?: string;
           team2?: string;
           score1?: number | null;

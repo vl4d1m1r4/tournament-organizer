@@ -57,6 +57,8 @@ interface Match {
   id: number;
   tournament_id: number;
   category_id: number;
+  group_name: string | null;
+  is_playoff: boolean;
   team1: string;
   team2: string;
   score1: number | null;
@@ -143,16 +145,17 @@ export default function TournamentDetails() {
   );
 }
 
-function generateStandingsTable(matches: Match[]) {
+function generateGroupStandings(matches: Match[]) {
   // Only consider matches with scores
   const completedMatches = matches.filter(
     (match) => match.score1 !== null && match.score2 !== null
   );
 
   if (completedMatches.length === 0) {
-    return <p>No completed matches yet.</p>;
+    return [];
   }
 
+  // Calculate standings
   const teams = new Map<
     string,
     {
@@ -169,7 +172,7 @@ function generateStandingsTable(matches: Match[]) {
     const score1 = match.score1 as number;
     const score2 = match.score2 as number;
 
-    // Initialize teams if not present
+    // Initialize team stats if not already present
     if (!teams.has(match.team1)) {
       teams.set(match.team1, {
         played: 0,
@@ -191,77 +194,135 @@ function generateStandingsTable(matches: Match[]) {
       });
     }
 
+    // Update team1 stats
     const team1Stats = teams.get(match.team1)!;
-    const team2Stats = teams.get(match.team2)!;
-
-    // Update matches played
     team1Stats.played++;
-    team2Stats.played++;
-
-    // Update points scored/conceded
     team1Stats.pointsScored += score1;
     team1Stats.pointsConceded += score2;
-    team2Stats.pointsScored += score2;
-    team2Stats.pointsConceded += score1;
-
-    // Update wins/losses and points
     if (score1 > score2) {
       team1Stats.wins++;
       team1Stats.points += 2;
-      team2Stats.losses++;
-      team2Stats.points += 1;
     } else {
-      team2Stats.wins++;
-      team2Stats.points += 2;
       team1Stats.losses++;
       team1Stats.points += 1;
     }
+
+    // Update team2 stats
+    const team2Stats = teams.get(match.team2)!;
+    team2Stats.played++;
+    team2Stats.pointsScored += score2;
+    team2Stats.pointsConceded += score1;
+    if (score2 > score1) {
+      team2Stats.wins++;
+      team2Stats.points += 2;
+    } else {
+      team2Stats.losses++;
+      team2Stats.points += 1;
+    }
   });
 
-  // Convert to array and sort
-  const standingsArray = Array.from(teams.entries()).map(([team, stats]) => ({
-    team,
-    ...stats,
-    pointDiff: stats.pointsScored - stats.pointsConceded,
-  }));
+  // Convert to array and sort by points (descending), then point differential
+  return Array.from(teams.entries())
+    .map(([team, stats]) => ({
+      team,
+      ...stats,
+      pointDiff: stats.pointsScored - stats.pointsConceded,
+    }))
+    .sort((a, b) => {
+      // Sort by points first
+      if (b.points !== a.points) return b.points - a.points;
+      // Then by point differential
+      return b.pointDiff - a.pointDiff;
+    });
+}
 
-  standingsArray.sort((a, b) => {
-    // First sort by points (descending)
-    if (b.points !== a.points) return b.points - a.points;
-    // Then by point differential (descending)
-    return b.pointDiff - a.pointDiff;
-  });
+function generateStandingsTable(matches: Match[]) {
+  // Group matches by group name
+  const groupMatches = matches.filter((match) => !match.is_playoff);
+  const groupNames = Array.from(
+    new Set(groupMatches.map((match) => match.group_name).filter(Boolean))
+  );
+
+  // Get playoff matches
+  const playoffMatches = matches.filter((match) => match.is_playoff);
+
+  // For each group, display standings
 
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>Team</th>
-          <th>Played</th>
-          <th>Wins</th>
-          <th>Losses</th>
-          <th>Points</th>
-          <th>Points Scored</th>
-          <th>Points Conceded</th>
-          <th>Point Diff</th>
-        </tr>
-      </thead>
-      <tbody>
-        {standingsArray.map((standing) => (
-          <tr key={standing.team}>
-            <td>{standing.team}</td>
-            <td>{standing.played}</td>
-            <td>{standing.wins}</td>
-            <td>{standing.losses}</td>
-            <td>
-              <strong>{standing.points}</strong>
-            </td>
-            <td>{standing.pointsScored}</td>
-            <td>{standing.pointsConceded}</td>
-            <td>{standing.pointDiff}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <>
+      {groupNames.map((groupName) => (
+        <div key={groupName} className="group-standings">
+          <h3>{groupName} Standings</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Position</th>
+                <th>Team</th>
+                <th>Played</th>
+                <th>Wins</th>
+                <th>Losses</th>
+                <th>Points</th>
+                <th>Points Scored</th>
+                <th>Points Conceded</th>
+                <th>Point Diff</th>
+              </tr>
+            </thead>
+            <tbody>
+              {generateGroupStandings(
+                matches.filter((match) => match.group_name === groupName)
+              ).map((standing, index) => (
+                <tr
+                  key={standing.team}
+                  className={index < 2 ? "qualifying" : ""}
+                >
+                  <td>{index + 1}</td>
+                  <td>{standing.team}</td>
+                  <td>{standing.played}</td>
+                  <td>{standing.wins}</td>
+                  <td>{standing.losses}</td>
+                  <td>
+                    <strong>{standing.points}</strong>
+                  </td>
+                  <td>{standing.pointsScored}</td>
+                  <td>{standing.pointsConceded}</td>
+                  <td>{standing.pointDiff}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+      {playoffMatches.length > 0 && (
+        <div className="playoff-section">
+          <h2>Playoff Matches</h2>
+          <div className="playoff-matches">
+            {playoffMatches.map((match) => (
+              <div key={match.id} className="playoff-match">
+                <h3>{match.group_name}</h3>
+                <div className="teams">
+                  <span className="team">{match.team1}</span>
+                  <span className="vs">vs</span>
+                  <span className="team">{match.team2}</span>
+                </div>
+                <div className="match-details">
+                  <div className="date">
+                    {new Date(match.date).toLocaleDateString()}
+                  </div>
+                  {match.time && <span className="time">{match.time}</span>}
+                  {match.location && (
+                    <span className="location">@ {match.location}</span>
+                  )}
+                </div>
+                <div className="score">
+                  {match.score1 !== null && match.score2 !== null
+                    ? `${match.score1} - ${match.score2}`
+                    : "Not played yet"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

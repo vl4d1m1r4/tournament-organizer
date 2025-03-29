@@ -140,3 +140,59 @@ form {
   gap: 1rem;
   margin-top: 1.5rem;
 }
+
+/* Highlight qualifying teams (top 2) */
+tr.qualifying {
+  background-color: #e3f2fd;
+  font-weight: bold;
+}
+
+/* Playoff section styling */
+.playoff-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.playoff-matches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.playoff-match {
+  padding: 1rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.playoff-match .teams {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.playoff-match .vs {
+  color: #6c757d;
+  padding: 0 0.5rem;
+}
+
+.playoff-match .match-details {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.playoff-match .score {
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 0.5rem;
+}

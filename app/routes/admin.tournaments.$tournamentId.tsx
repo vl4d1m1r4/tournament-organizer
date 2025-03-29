@@ -99,6 +99,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
     case "addMatch": {
       const categoryId = formData.get("categoryId") as string;
+      const isPlayoff = formData.get("isPlayoff") === "true";
+      const groupName = formData.get("groupName") as string;
       const team1 = formData.get("team1") as string;
       const team2 = formData.get("team2") as string;
       const date = formData.get("date") as string;
@@ -109,6 +111,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         {
           tournament_id: tournamentId,
           category_id: categoryId,
+          is_playoff: isPlayoff,
+          group_name: groupName,
           team1,
           team2,
           date,
@@ -193,6 +197,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
     case "updateMatch": {
       const matchId = formData.get("matchId") as string;
+      const isPlayoff = formData.get("isPlayoff") === "true";
+      const groupName = formData.get("groupName") as string;
       const team1 = formData.get("team1") as string;
       const team2 = formData.get("team2") as string;
       const date = formData.get("date") as string;
@@ -202,6 +208,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       const { error } = await supabase
         .from("matches")
         .update({
+          is_playoff: isPlayoff,
+          group_name: groupName,
           team1,
           team2,
           date,
@@ -230,6 +238,8 @@ interface Match {
   id: number;
   tournament_id: number;
   category_id: number;
+  group_name: string | null;
+  is_playoff: boolean;
   team1: string;
   team2: string;
   score1: number | null;
@@ -390,12 +400,38 @@ export default function AdminTournament() {
                 </select>
               </div>
               <div className="form-group">
+                <label htmlFor="isPlayoff">Match Type:</label>
+                <select id="isPlayoff" name="isPlayoff">
+                  <option value="false">Group Match</option>
+                  <option value="true">Playoff Match</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="groupName">Group Name:</label>
+                <input
+                  type="text"
+                  id="groupName"
+                  name="groupName"
+                  placeholder="e.g., Group A"
+                />
+                <small>Leave empty for playoff matches</small>
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="team1">Team 1:</label>
                 <input type="text" id="team1" name="team1" required />
+                <small>
+                  For playoffs, can be "1st Group A" if team not determined yet
+                </small>
               </div>
+
               <div className="form-group">
                 <label htmlFor="team2">Team 2:</label>
                 <input type="text" id="team2" name="team2" required />
+                <small>
+                  For playoffs, can be "2nd Group B" if team not determined yet
+                </small>
               </div>
               <div className="form-group">
                 <label htmlFor="date">Date:</label>
@@ -509,6 +545,29 @@ export default function AdminTournament() {
                                   defaultValue={match.location || ""}
                                   placeholder="Enter new location"
                                 />
+                              </div>
+                              <div className="form-group">
+                                <label htmlFor="isPlayoff">Match Type:</label>
+                                <select
+                                  id="isPlayoff"
+                                  name="isPlayoff"
+                                  defaultChecked={match.is_playoff}
+                                >
+                                  <option value="false">Group Match</option>
+                                  <option value="true">Playoff Match</option>
+                                </select>
+                              </div>
+
+                              <div className="form-group">
+                                <label htmlFor="groupName">Group Name:</label>
+                                <input
+                                  type="text"
+                                  id="groupName"
+                                  name="groupName"
+                                  defaultValue={match.group_name || ""}
+                                  placeholder="e.g., Group A"
+                                />
+                                <small>Leave empty for playoff matches</small>
                               </div>
                               <div className="form-group">
                                 <label htmlFor={`team1-${match.id}`}>
