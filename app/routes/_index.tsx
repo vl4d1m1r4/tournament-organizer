@@ -15,7 +15,7 @@ export default function Index() {
         Welcome to the Basketball Tournament App. View ongoing tournaments and
         results.
       </p>
-      <p>Current date: March 28, 2025</p>
+      <p>Current date: {new Date().toLocaleDateString()}</p>
       <div className="cta-buttons">
         <a href="/tournaments" className="btn">
           View Tournaments

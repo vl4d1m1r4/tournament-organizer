@@ -37,7 +37,8 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
     .from("matches")
     .select("*")
     .eq("tournament_id", tournamentId)
-    .order("date", { ascending: true });
+    .order("date", { ascending: true })
+    .order("time", { ascending: true });
 
   if (matchesError) {
     console.error("Error fetching matches:", matchesError);
