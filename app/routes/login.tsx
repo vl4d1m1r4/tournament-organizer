@@ -61,7 +61,7 @@ export default function Login() {
           <input type="password" id="password" name="password" required />
         </div>
 
-        <button type="submit" className="btn">
+        <button type="submit" className="btn btn-primary">
           Login
         </button>
       </Form>

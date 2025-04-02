@@ -41,7 +41,10 @@ export default function TournamentsList() {
                 Dates: {new Date(tournament.start_date).toLocaleDateString()} -{" "}
                 {new Date(tournament.end_date).toLocaleDateString()}
               </p>
-              <a href={`/tournaments/${tournament.id}`} className="btn">
+              <a
+                href={`/tournaments/${tournament.id}`}
+                className="btn btn-primary"
+              >
                 View Details
               </a>
             </div>

@@ -17,7 +17,7 @@ export default function Index() {
       </p>
       <p>Current date: {new Date().toLocaleDateString()}</p>
       <div className="cta-buttons">
-        <a href="/tournaments" className="btn">
+        <a href="/tournaments" className="btn btn-primary">
           View Tournaments
         </a>
       </div>

@@ -36,7 +36,7 @@ export default function AdminDashboard() {
       <h1>Admin Dashboard</h1>
 
       <div className="admin-actions">
-        <Link to="/admin/tournaments/new" className="btn">
+        <Link to="/admin/tournaments/new" className="btn btn-primary">
           Create New Tournament
         </Link>
       </div>
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
                 <td>
                   <Link
                     to={`/admin/tournaments/${tournament.id}`}
-                    className="btn"
+                    className="btn btn-primary"
                   >
                     Manage
                   </Link>

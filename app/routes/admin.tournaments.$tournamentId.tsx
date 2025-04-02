@@ -309,7 +309,7 @@ export default function AdminTournament() {
               required
             />
           </div>
-          <button type="submit" className="btn">
+          <button type="submit" className="btn btn-primary">
             Update Tournament
           </button>
         </Form>
@@ -332,7 +332,7 @@ export default function AdminTournament() {
               <option value="completed">Completed</option>
             </select>
           </div>
-          <button type="submit" className="btn">
+          <button type="submit" className="btn btn-primary">
             Update Status
           </button>
         </Form>
@@ -340,7 +340,7 @@ export default function AdminTournament() {
 
       <h2>Categories</h2>
       <button
-        className="btn"
+        className="btn btn-neutral"
         onClick={() => setShowAddCategory(!showAddCategory)}
       >
         {showAddCategory ? "Cancel" : "Add Category"}
@@ -353,7 +353,7 @@ export default function AdminTournament() {
             <label htmlFor="categoryName">Category Name:</label>
             <input type="text" id="categoryName" name="categoryName" required />
           </div>
-          <button type="submit" className="btn">
+          <button type="submit" className="btn btn-primary">
             Add Category
           </button>
         </Form>
@@ -368,7 +368,7 @@ export default function AdminTournament() {
         <>
           <h2>Matches</h2>
           <button
-            className="btn"
+            className="btn btn-neutral"
             onClick={() => {
               setShowAddMatch(!showAddMatch);
               if (!showAddMatch && categories.length > 0) {
@@ -452,7 +452,7 @@ export default function AdminTournament() {
                   required
                 />
               </div>
-              <button type="submit" className="btn">
+              <button type="submit" className="btn btn-primary">
                 Add Match
               </button>
             </Form>
@@ -480,7 +480,7 @@ export default function AdminTournament() {
                         defaultValue={category.name}
                         required
                       />
-                      <button type="submit" className="btn">
+                      <button type="submit" className="btn btn-primary">
                         Save
                       </button>
                       <button
@@ -496,7 +496,7 @@ export default function AdminTournament() {
                   <>
                     <h3>{category.name}</h3>
                     <button
-                      className="btn"
+                      className="btn btn-neutral"
                       onClick={() => setEditingCategory(category.id)}
                     >
                       Edit
@@ -618,7 +618,10 @@ export default function AdminTournament() {
                                 />
                               </div>
                               <div className="form-actions">
-                                <button type="submit" className="btn">
+                                <button
+                                  type="submit"
+                                  className="btn btn-primary"
+                                >
                                   Save
                                 </button>
                                 <button
@@ -683,7 +686,10 @@ export default function AdminTournament() {
                                         textAlign: "right",
                                       }}
                                     />
-                                    <button type="submit" className="btn">
+                                    <button
+                                      type="submit"
+                                      className="btn btn-neutral"
+                                    >
                                       Update Score
                                     </button>
                                   </div>
@@ -692,7 +698,7 @@ export default function AdminTournament() {
                             </td>
                             <td>
                               <button
-                                className="btn"
+                                className="btn btn-secondary"
                                 onClick={() => setEditingMatch(match.id)}
                               >
                                 Edit Match
@@ -715,7 +721,7 @@ export default function AdminTournament() {
       <div className="form-actions" style={{ marginTop: "2rem" }}>
         <button
           type="button"
-          className="btn"
+          className="btn btn-primary"
           onClick={() => navigate(`/tournaments/${tournament.id}`)}
         >
           View Public Page

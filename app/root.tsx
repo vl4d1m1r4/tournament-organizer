@@ -13,7 +13,13 @@ import { useState } from "react";
 import { createSupabaseServerClient } from "./utils/supabase.server";
 import styles from "./styles/global.css?url";
 
-export const links = () => [{ rel: "stylesheet", href: styles }];
+export const links = () => [
+  { rel: "stylesheet", href: styles },
+  {
+    rel: "stylesheet",
+    href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap",
+  },
+];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const env = {

@@ -84,7 +84,7 @@ export default function NewTournament() {
         </div>
 
         <div className="form-actions">
-          <button type="submit" className="btn">
+          <button type="submit" className="btn btn-primary">
             Create Tournament
           </button>
           <button
