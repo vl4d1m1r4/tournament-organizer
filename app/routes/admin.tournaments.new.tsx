@@ -3,8 +3,10 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "@remix-run/node";
-import { Form, useNavigate } from "@remix-run/react";
+import { Form, useNavigate, useFetcher } from "@remix-run/react";
+import { useState, useEffect } from "react";
 import { createSupabaseServerClient } from "~/utils/supabase.server";
+import LoadingSpinner from "~/components/LoadingSpinner";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const response = new Response();
@@ -62,40 +64,78 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function NewTournament() {
   const navigate = useNavigate();
+  const fetcher = useFetcher();
+  const isLoading = fetcher.state === "submitting";
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    fetcher.submit(formData, { method: "post" });
+  };
 
   return (
     <div>
       <h1>Create New Tournament</h1>
 
-      <Form method="post">
+      <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="name">Tournament Name:</label>
-          <input type="text" id="name" name="name" required />
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required
+            disabled={isLoading}
+          />
         </div>
 
         <div className="form-group">
           <label htmlFor="startDate">Start Date:</label>
-          <input type="date" id="startDate" name="startDate" required />
+          <input
+            type="date"
+            id="startDate"
+            name="startDate"
+            required
+            disabled={isLoading}
+          />
         </div>
 
         <div className="form-group">
           <label htmlFor="endDate">End Date:</label>
-          <input type="date" id="endDate" name="endDate" required />
+          <input
+            type="date"
+            id="endDate"
+            name="endDate"
+            required
+            disabled={isLoading}
+          />
         </div>
 
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary">
-            Create Tournament
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <LoadingSpinner size="sm" />
+                <span className="ml-2">Creating...</span>
+              </div>
+            ) : (
+              "Create Tournament"
+            )}
           </button>
           <button
             type="button"
             className="btn btn-secondary"
             onClick={() => navigate("/admin/dashboard")}
+            disabled={isLoading}
           >
             Cancel
           </button>
         </div>
-      </Form>
+      </form>
     </div>
   );
 }

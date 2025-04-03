@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 import { createSupabaseServerClient } from "~/utils/supabase.server";
 import LoadingSpinner from "~/components/LoadingSpinner";
 import Notification from "~/components/Notification";
+import ConfirmDialog from "~/components/ConfirmDialog";
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   const tournamentId = params.tournamentId;
@@ -239,6 +240,48 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       }
       return json({ _action: action });
     }
+
+    case "deleteCategory": {
+      const categoryId = formData.get("categoryId") as string;
+
+      // First delete all matches in this category
+      const { error: matchesError } = await supabase
+        .from("matches")
+        .delete()
+        .eq("category_id", categoryId);
+
+      if (matchesError) {
+        console.error("Error deleting matches:", matchesError);
+        return json({ _action: action, error: matchesError.message });
+      }
+
+      // Then delete the category
+      const { error } = await supabase
+        .from("categories")
+        .delete()
+        .eq("id", categoryId);
+
+      if (error) {
+        console.error("Error deleting category:", error);
+        return json({ _action: action, error: error.message });
+      }
+      return json({ _action: action });
+    }
+
+    case "deleteMatch": {
+      const matchId = formData.get("matchId") as string;
+
+      const { error } = await supabase
+        .from("matches")
+        .delete()
+        .eq("id", matchId);
+
+      if (error) {
+        console.error("Error deleting match:", error);
+        return json({ _action: action, error: error.message });
+      }
+      return json({ _action: action });
+    }
   }
 
   return json({ _action: action });
@@ -285,6 +328,27 @@ export default function AdminTournament() {
     message: string;
     type: "success" | "error";
   } | null>(null);
+
+  // Delete confirmation states
+  const [deleteCategoryDialog, setDeleteCategoryDialog] = useState<{
+    isOpen: boolean;
+    categoryId: number | null;
+    categoryName: string;
+  }>({
+    isOpen: false,
+    categoryId: null,
+    categoryName: "",
+  });
+
+  const [deleteMatchDialog, setDeleteMatchDialog] = useState<{
+    isOpen: boolean;
+    matchId: number | null;
+    matchName: string;
+  }>({
+    isOpen: false,
+    matchId: null,
+    matchName: "",
+  });
 
   // Group matches by category
   const matchesByCategory = categories.reduce(
@@ -342,6 +406,22 @@ export default function AdminTournament() {
           message: "Score updated successfully!",
           type: "success",
         });
+      } else if (action === "deleteCategory") {
+        setNotification({
+          message: "Category deleted successfully!",
+          type: "success",
+        });
+        setDeleteCategoryDialog({
+          isOpen: false,
+          categoryId: null,
+          categoryName: "",
+        });
+      } else if (action === "deleteMatch") {
+        setNotification({
+          message: "Match deleted successfully!",
+          type: "success",
+        });
+        setDeleteMatchDialog({ isOpen: false, matchId: null, matchName: "" });
       }
     }
   }, [fetcher.state, fetcher.data]);
@@ -397,6 +477,40 @@ export default function AdminTournament() {
     fetcher.submit(formData, { method: "post" });
   };
 
+  const handleDeleteCategory = (categoryId: number, categoryName: string) => {
+    setDeleteCategoryDialog({
+      isOpen: true,
+      categoryId,
+      categoryName,
+    });
+  };
+
+  const confirmDeleteCategory = () => {
+    if (deleteCategoryDialog.categoryId) {
+      const formData = new FormData();
+      formData.append("_action", "deleteCategory");
+      formData.append("categoryId", deleteCategoryDialog.categoryId.toString());
+      fetcher.submit(formData, { method: "post" });
+    }
+  };
+
+  const handleDeleteMatch = (matchId: number, team1: string, team2: string) => {
+    setDeleteMatchDialog({
+      isOpen: true,
+      matchId,
+      matchName: `${team1} vs ${team2}`,
+    });
+  };
+
+  const confirmDeleteMatch = () => {
+    if (deleteMatchDialog.matchId) {
+      const formData = new FormData();
+      formData.append("_action", "deleteMatch");
+      formData.append("matchId", deleteMatchDialog.matchId.toString());
+      fetcher.submit(formData, { method: "post" });
+    }
+  };
+
   const isLoading = fetcher.state === "submitting";
 
   return (
@@ -410,6 +524,34 @@ export default function AdminTournament() {
           />
         </div>
       )}
+
+      {/* Delete Category Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteCategoryDialog.isOpen}
+        title="Delete Category"
+        message={`Are you sure you want to delete the category "${deleteCategoryDialog.categoryName}"? This will also delete all matches in this category.`}
+        onConfirm={confirmDeleteCategory}
+        onCancel={() =>
+          setDeleteCategoryDialog({
+            isOpen: false,
+            categoryId: null,
+            categoryName: "",
+          })
+        }
+        isLoading={isLoading}
+      />
+
+      {/* Delete Match Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteMatchDialog.isOpen}
+        title="Delete Match"
+        message={`Are you sure you want to delete the match "${deleteMatchDialog.matchName}"?`}
+        onConfirm={confirmDeleteMatch}
+        onCancel={() =>
+          setDeleteMatchDialog({ isOpen: false, matchId: null, matchName: "" })
+        }
+        isLoading={isLoading}
+      />
 
       <div className="section">
         <div className="flex justify-between items-center mb-6">
@@ -892,25 +1034,48 @@ export default function AdminTournament() {
                 ) : (
                   <>
                     <h3>{category.name}</h3>
-                    <button
-                      className="btn-icon"
-                      onClick={() => setEditingCategory(category.id)}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="btn-icon"
+                        onClick={() => setEditingCategory(category.id)}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                        />
-                      </svg>
-                    </button>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        className="btn-icon text-red-600"
+                        onClick={() =>
+                          handleDeleteCategory(category.id, category.name)
+                        }
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
@@ -1125,13 +1290,28 @@ export default function AdminTournament() {
                               </div>
                             </td>
                             <td>
-                              <button
-                                className="btn btn-secondary"
-                                onClick={() => setEditingMatch(match.id)}
-                                disabled={isLoading}
-                              >
-                                Edit Match
-                              </button>
+                              <div className="flex gap-2">
+                                <button
+                                  className="btn btn-secondary"
+                                  onClick={() => setEditingMatch(match.id)}
+                                  disabled={isLoading}
+                                >
+                                  Edit Match
+                                </button>
+                                <button
+                                  className="btn btn-danger"
+                                  onClick={() =>
+                                    handleDeleteMatch(
+                                      match.id,
+                                      match.team1,
+                                      match.team2
+                                    )
+                                  }
+                                  disabled={isLoading}
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </td>
                           </>
                         )}
