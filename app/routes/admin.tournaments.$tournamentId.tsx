@@ -1318,10 +1318,7 @@ export default function AdminTournament() {
                                       name="score1"
                                       defaultValue={match.score1 || ""}
                                       min="0"
-                                      style={{
-                                        width: "60px",
-                                        textAlign: "right",
-                                      }}
+                                      className="border rounded px-2 py-1 w-16 text-right bg-white shadow-sm"
                                       disabled={isLoading}
                                     />
                                     <span>-</span>
@@ -1330,10 +1327,7 @@ export default function AdminTournament() {
                                       name="score2"
                                       defaultValue={match.score2 || ""}
                                       min="0"
-                                      style={{
-                                        width: "60px",
-                                        textAlign: "right",
-                                      }}
+                                      className="border rounded px-2 py-1 w-16 text-right bg-white shadow-sm"
                                       disabled={isLoading}
                                     />
                                     <button
