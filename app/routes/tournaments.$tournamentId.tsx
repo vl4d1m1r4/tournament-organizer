@@ -253,7 +253,7 @@ function generateStandingsTable(matches: Match[]) {
     <>
       {groupNames.map((groupName) => (
         <div key={groupName} className="group-standings">
-          <h3>{groupName} Standings</h3>
+          <h3>Group {groupName}</h3>
           <table>
             <thead>
               <tr>
@@ -299,7 +299,7 @@ function generateStandingsTable(matches: Match[]) {
           <div className="playoff-matches">
             {playoffMatches.map((match) => (
               <div key={match.id} className="playoff-match">
-                <h3>{match.group_name}</h3>
+                <h4>{match.group_name}</h4>
                 <div className="teams">
                   <span className="team">{match.team1}</span>
                   <span className="vs">vs</span>

@@ -6,6 +6,7 @@ import {
   ScrollRestoration,
   json,
   useLoaderData,
+  useLocation,
 } from "@remix-run/react";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { createBrowserClient } from "@supabase/auth-helpers-remix";
@@ -41,6 +42,10 @@ export default function App() {
   const [supabase] = useState(() =>
     createBrowserClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY)
   );
+  const location = useLocation();
+  const isCategoryOverview = location.pathname.startsWith(
+    "/category-overview/"
+  );
 
   return (
     <html lang="en">
@@ -51,25 +56,29 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <header>
-          <nav>
-            <a href="/">Basketball Tournament</a>
-            <div>
-              <a href="/tournaments">Tournaments</a>
-              {user ? (
-                <a href="/admin/dashboard">Admin Dashboard</a>
-              ) : (
-                <a href="/login">Admin Login</a>
-              )}
-            </div>
-          </nav>
-        </header>
+        {!isCategoryOverview && (
+          <header>
+            <nav>
+              <a href="/">Basketball Tournament</a>
+              <div>
+                <a href="/tournaments">Tournaments</a>
+                {user ? (
+                  <a href="/admin/dashboard">Admin Dashboard</a>
+                ) : (
+                  <a href="/login">Admin Login</a>
+                )}
+              </div>
+            </nav>
+          </header>
+        )}
         <main>
           <Outlet context={{ supabase, user }} />
         </main>
-        <footer>
-          <p>© {new Date().getFullYear()} Basketball Tournament App</p>
-        </footer>
+        {!isCategoryOverview && (
+          <footer>
+            <p>© {new Date().getFullYear()} Basketball Tournament App</p>
+          </footer>
+        )}
         <ScrollRestoration />
         <Scripts />
       </body>

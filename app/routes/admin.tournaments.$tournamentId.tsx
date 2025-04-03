@@ -313,6 +313,40 @@ interface FetcherData {
   error?: string;
 }
 
+// Component for Playoff Match Item
+const PlayoffMatchItem: React.FC<{
+  match: Match;
+  label: string;
+}> = ({ match, label }) => {
+  // Determine text size based on label
+  const labelStyles =
+    label === "FINAL" ? "text-sm font-semibold p-1" : "text-xs p-1"; // Smaller text for 3rd place, etc.
+  const teamBoxStyles =
+    label === "FINAL"
+      ? "p-3 text-lg" // Larger text/padding for Final
+      : "p-2 text-base"; // Slightly smaller padding/text for others
+
+  return (
+    <div className="flex flex-col items-center mb-4">
+      {/* Orange Box for Teams */}
+      <div
+        className={`bg-[#F97316] text-white rounded-t text-center shadow-md w-40 ${teamBoxStyles}`}
+      >
+        {/* Display team names or placeholders */}
+        <div className="font-semibold">{match.team1 || "TBD"}</div>
+        <div className="text-xs my-1">vs</div>
+        <div className="font-semibold">{match.team2 || "TBD"}</div>
+      </div>
+      {/* Blue Box for Label (e.g., FINAL) */}
+      <div
+        className={`bg-[#1D4ED8] text-white rounded-b text-center shadow-md w-40 ${labelStyles}`}
+      >
+        {label}
+      </div>
+    </div>
+  );
+};
+
 export default function AdminTournament() {
   const { tournament, categories, matches } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
@@ -1075,6 +1109,34 @@ export default function AdminTournament() {
                           />
                         </svg>
                       </button>
+                      <Link
+                        to={`/category-overview/${category.id}`}
+                        className="btn-icon text-blue-600"
+                        title="Preview Category"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      </Link>
                     </div>
                   </>
                 )}
