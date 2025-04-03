@@ -71,9 +71,13 @@ export default function App() {
             </nav>
           </header>
         )}
-        <main>
+        {!isCategoryOverview ? (
+          <main>
+            <Outlet context={{ supabase, user }} />
+          </main>
+        ) : (
           <Outlet context={{ supabase, user }} />
-        </main>
+        )}
         {!isCategoryOverview && (
           <footer>
             <p>© {new Date().getFullYear()} Basketball Tournament App</p>

@@ -124,7 +124,7 @@ const formatTime = (timeString: string | null): string => {
 // Component for a single match item in the list
 const MatchItem: React.FC<{ match: Match }> = ({ match }) => {
   return (
-    <div className="flex items-center mb-2 items-stretch w-64">
+    <div className="flex items-center mb-2 items-stretch w-full md:w-64">
       {" "}
       {/* Fixed width */}
       {/* Date/Time Box */}
@@ -148,18 +148,21 @@ const MatchItem: React.FC<{ match: Match }> = ({ match }) => {
 // Component for the Group Table (Teams List) - Smaller size
 const GroupTable: React.FC<{
   group: string;
+  rightAlign?: boolean;
   teams: string[];
   location: string | null;
-}> = ({ group, teams, location }) => {
+}> = ({ group, rightAlign, teams, location }) => {
   return (
     <div className="mb-4">
       <div className="flex flex-row items-start">
-        <div className="font-bold text-base mb-1 flex items-center justify-center">
-          {/* Smaller circle */}
-          <span className="text-white bg-blue-800/80 h-5 w-5 flex items-center justify-center mt-1 p-4">
-            {group}
-          </span>
-        </div>
+        {!rightAlign && (
+          <div className="font-bold text-base mb-1 flex items-center justify-center">
+            {/* Smaller circle */}
+            <span className="text-white bg-blue-800/80 h-5 w-5 flex items-center justify-center mt-1 p-4">
+              {group}
+            </span>
+          </div>
+        )}
         {/* Reduced padding and font size */}
         <div className="bg-[#374151] text-white p-2 w-full">
           {/* Smaller font size and truncate */}
@@ -172,6 +175,14 @@ const GroupTable: React.FC<{
             ))}
           </ul>
         </div>
+        {rightAlign && (
+          <div className="font-bold text-base mb-1 flex items-center justify-center">
+            {/* Smaller circle */}
+            <span className="text-white bg-blue-800/80 h-5 w-5 flex items-center justify-center mt-1 p-4">
+              {group}
+            </span>
+          </div>
+        )}
       </div>
       {location && (
         /* Reduced padding and font size, added truncate */
@@ -193,15 +204,15 @@ const PlayoffMatchItem: React.FC<{ match: Match }> = ({ match }) => {
 
   // Adjust styles for horizontal layout
   const labelStyles = isFinal
-    ? "text-sm font-semibold py-1 px-2" // Slightly more padding for final label
-    : "text-xs py-0.5 px-2";
+    ? "text-md font-semibold py-2 px-4" // Slightly more padding for final label
+    : "text-sm py-1 px-4";
   const teamBoxStyles = isFinal
-    ? "p-2 text-base" // Reduced padding for final teams
-    : "p-1.5 text-sm"; // Reduced padding for other teams
+    ? "p-4 text-base" // Reduced padding for final teams
+    : "p-2 text-sm"; // Reduced padding for other teams
 
   return (
     // Adjusted width constraints, ensures centering
-    <div className="flex flex-col items-center mb-4 w-auto min-w-[180px] max-w-[240px]">
+    <div className="flex flex-col items-center mb-4 w-auto min-w-[180px]">
       {/* Orange Box - Horizontal Teams */}
       <div
         className={`bg-[#F97316] text-white rounded-t text-center shadow-md w-full ${teamBoxStyles}`}
@@ -249,7 +260,7 @@ const GroupMatchesColumn: React.FC<{ matchesByDate: MatchesByDate }> = ({
   }
 
   return (
-    <div className="mt-4 flex flex-row gap-4 overflow-x-auto pb-2">
+    <div className="flex-col mt-4 flex md:flex-row gap-4 overflow-x-auto pb-2">
       {sortedDates.map((date) => {
         const dailyMatches = matchesByDate[date];
         return (
@@ -438,7 +449,7 @@ export default function CategoryOverview() {
         style={{ backgroundImage: "url('/images/background.svg')" }}
       >
         {/* Grid container */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] gap-4 md:gap-8 items-start max-w-6xl mx-auto relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] gap-4 md:gap-8 items-start max-w-6xl mx-auto relative z-10 order-1">
           {/* --- Group Column 1 --- */}
           {groupNames.length > 0 && (
             <div className="flex flex-col">
@@ -456,7 +467,7 @@ export default function CategoryOverview() {
           )}
           {/* --- Center Column (Playoffs) --- */}
           {groupNames.length > 0 && (
-            <div className="flex flex-col items-center justify-start space-y-4 pt-8 md:pt-16">
+            <div className="flex flex-col items-center justify-start space-y-4 pt-8 order-last md:order-2">
               {playoffMatches.length > 0 ? (
                 playoffMatches.map((match: Match) => (
                   <PlayoffMatchItem key={match.id} match={match} />
@@ -468,9 +479,10 @@ export default function CategoryOverview() {
           )}
           {/* --- Group Column 2 --- */}
           {groupNames.length > 1 && (
-            <div className="flex flex-col">
+            <div className="flex flex-col order-3">
               <GroupTable
                 group={groupNames[1]}
+                rightAlign={true}
                 teams={getUniqueTeams(groupNames[1])}
                 location={getUniqueLocation(groupNames[1])}
               />
@@ -480,7 +492,7 @@ export default function CategoryOverview() {
           {/* Empty div to maintain grid structure */}
           {/* --- Match Lists Row (Below Grid) --- */}
           {/* This row spans all 3 columns */}
-          <div className="col-span-1 md:col-span-3 flex flex-col md:flex-row gap-4 md:gap-8 justify-between mt-4">
+          <div className="col-span-1 md:col-span-3 flex flex-col md:flex-row gap-4 md:gap-8 justify-between mt-4 order-4">
             {/* Group 1 Matches */}
             {groupNames.length > 0 && (
               <GroupMatchesColumn
