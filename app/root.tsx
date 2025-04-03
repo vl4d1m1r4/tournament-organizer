@@ -58,14 +58,22 @@ export default function App() {
       <body>
         {!isCategoryOverview && (
           <header>
-            <nav>
-              <a href="/">Basketball Tournament</a>
-              <div>
-                <a href="/tournaments">Tournaments</a>
+            <nav className="flex justify-between items-center p-4 shadow-md text-blue-100">
+              <a href="/" className="text-lg font-semibold">
+                Basketball Tournament
+              </a>
+              <div className="flex gap-4">
+                <a href="/tournaments" className="hover:text-blue-300">
+                  Tournaments
+                </a>
                 {user ? (
-                  <a href="/admin/dashboard">Admin Dashboard</a>
+                  <a href="/admin/dashboard" className="hover:text-blue-30">
+                    Admin Dashboard
+                  </a>
                 ) : (
-                  <a href="/login">Admin Login</a>
+                  <a href="/login" className="hover:text-blue-300">
+                    Admin Login
+                  </a>
                 )}
               </div>
             </nav>
