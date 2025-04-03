@@ -1,5 +1,6 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import { useState } from "react";
 import { createSupabaseServerClient } from "~/utils/supabase.server";
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
@@ -22,7 +23,8 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   const { data: categories, error: categoriesError } = await supabase
     .from("categories")
     .select("*")
-    .eq("tournament_id", tournamentId);
+    .eq("tournament_id", tournamentId)
+    .order("name", { ascending: true });
 
   if (categoriesError) {
     console.error("Error fetching categories:", categoriesError);
@@ -54,6 +56,12 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   );
 };
 
+interface Category {
+  id: number;
+  tournament_id: number;
+  name: string;
+}
+
 interface Match {
   id: number;
   tournament_id: number;
@@ -71,6 +79,9 @@ interface Match {
 
 export default function TournamentDetails() {
   const { tournament, categories, matches } = useLoaderData<typeof loader>();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null
+  );
 
   // Group matches by category
   const matchesByCategory = categories.reduce(
@@ -83,11 +94,19 @@ export default function TournamentDetails() {
     {}
   );
 
+  // Filter categories based on selection
+  const filteredCategories =
+    selectedCategoryId === null
+      ? categories
+      : categories.filter((category) => category.id === selectedCategoryId);
+
   return (
-    <div>
-      <h1>{tournament.name}</h1>
-      <p>Status: {tournament.status}</p>
-      <p>
+    <div className="p-4 md:p-8">
+      <h1 className="text-3xl font-bold mb-4">{tournament.name}</h1>
+      <p className="mb-1">
+        Status: <span className="font-semibold">{tournament.status}</span>
+      </p>
+      <p className="mb-6">
         Dates: {new Date(tournament.start_date).toLocaleDateString()} -{" "}
         {new Date(tournament.end_date).toLocaleDateString()}
       </p>
@@ -96,50 +115,112 @@ export default function TournamentDetails() {
         <p>No categories defined for this tournament.</p>
       ) : (
         <>
-          <h2>Categories</h2>
-          {categories.map((category) => (
-            <div key={category.id}>
-              <h3>{category.name}</h3>
-
-              {matchesByCategory[category.id]?.length > 0 ? (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date & Time</th>
-                      <th>Teams</th>
-                      <th>Location</th>
-                      <th>Score</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matchesByCategory[category.id].map((match) => (
-                      <tr key={match.id}>
-                        <td>
-                          {new Date(match.date).toLocaleDateString()}{" "}
-                          {match.time && ` ${match.time}`}
-                        </td>
-                        <td>
-                          {match.team1} vs {match.team2}
-                        </td>
-                        <td>{match.location || "Not specified"}</td>
-                        <td>
-                          {match.score1 !== null && match.score2 !== null
-                            ? `${match.score1} - ${match.score2}`
-                            : "Not played yet"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p>No matches scheduled for this category.</p>
-              )}
-
-              {/* Standings table */}
-              <h4>Standings</h4>
-              {generateStandingsTable(matchesByCategory[category.id] || [])}
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">Filter by Category:</h2>
+            <div className="flex flex-wrap gap-2">
+              {/* "All Categories" Button */}
+              <button
+                onClick={() => setSelectedCategoryId(null)}
+                className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                  selectedCategoryId === null
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                All Categories
+              </button>
+              {/* Category Filter Buttons */}
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategoryId(category.id)}
+                  className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                    selectedCategoryId === category.id
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  {category.name}
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/* Render filtered categories */}
+          <div className="space-y-8">
+            {filteredCategories.map((category) => (
+              <div key={category.id} className="shadow-sm">
+                <h3 className="text-2xl font-semibold mb-4">{category.name}</h3>
+
+                {/* Matches Table */}
+                <h4 className="text-lg font-semibold mb-2">Matches</h4>
+                {matchesByCategory[category.id]?.length > 0 ? (
+                  <div className="overflow-x-auto mb-6">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date & Location
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Team 1
+                          </th>
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Score 1
+                          </th>
+                          <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"></th>{" "}
+                          {/* vs */}
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Score 2
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Team 2
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {matchesByCategory[category.id].map((match) => (
+                          <tr key={match.id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <div>
+                                {new Date(match.date).toLocaleDateString()}{" "}
+                                {match.time && ` ${match.time.substring(0, 5)}`}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {match.location || "TBD"}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                              {match.team1}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-center">
+                              {match.score1 ?? "-"}
+                            </td>
+                            <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-400 text-center">
+                              vs
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-center">
+                              {match.score2 ?? "-"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                              {match.team2}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 mb-6">
+                    No matches scheduled for this category yet.
+                  </p>
+                )}
+
+                {/* Standings table */}
+                {generateStandingsTable(matchesByCategory[category.id] || [])}
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>
@@ -147,16 +228,15 @@ export default function TournamentDetails() {
 }
 
 function generateGroupStandings(matches: Match[]) {
-  // Only consider matches with scores
-  const completedMatches = matches.filter(
-    (match) => match.score1 !== null && match.score2 !== null
-  );
+  // Extract all unique teams participating in these matches
+  const allTeams = new Set<string>();
+  matches
+    .filter((match) => !match.is_playoff)
+    .forEach((match) => {
+      allTeams.add(match.team2);
+    });
 
-  if (completedMatches.length === 0) {
-    return [];
-  }
-
-  // Calculate standings
+  // Initialize standings for all teams with 0 values
   const teams = new Map<
     string,
     {
@@ -168,61 +248,76 @@ function generateGroupStandings(matches: Match[]) {
       pointsConceded: number;
     }
   >();
+  allTeams.forEach((team) => {
+    teams.set(team, {
+      played: 0,
+      wins: 0,
+      losses: 0,
+      points: 0,
+      pointsScored: 0,
+      pointsConceded: 0,
+    });
+  });
 
-  completedMatches.forEach((match) => {
+  // Only consider non-playoff matches with scores for calculation
+  const completedGroupMatches = matches.filter(
+    (match) =>
+      !match.is_playoff && match.score1 !== null && match.score2 !== null
+  );
+
+  // If no matches are completed, we still return the initialized zero stats
+  // if (completedGroupMatches.length === 0) {
+  //   // Convert the initialized map to the array format expected
+  //   return Array.from(teams.entries()).map(([team, stats]) => ({
+  //     team,
+  //     ...stats,
+  //     pointDiff: 0,
+  //   }));
+  // }
+
+  // Calculate standings based on completed matches
+  completedGroupMatches.forEach((match) => {
     const score1 = match.score1 as number;
     const score2 = match.score2 as number;
 
-    // Initialize team stats if not already present
-    if (!teams.has(match.team1)) {
-      teams.set(match.team1, {
-        played: 0,
-        wins: 0,
-        losses: 0,
-        points: 0,
-        pointsScored: 0,
-        pointsConceded: 0,
-      });
-    }
-    if (!teams.has(match.team2)) {
-      teams.set(match.team2, {
-        played: 0,
-        wins: 0,
-        losses: 0,
-        points: 0,
-        pointsScored: 0,
-        pointsConceded: 0,
-      });
+    // Get potentially initialized stats
+    const team1Stats = teams.get(match.team1);
+    const team2Stats = teams.get(match.team2);
+
+    // Update team1 stats if team exists in the map
+    if (team1Stats) {
+      team1Stats.played++;
+      team1Stats.pointsScored += score1;
+      team1Stats.pointsConceded += score2;
+      if (score1 > score2) {
+        // Win = 2 points
+        team1Stats.wins++;
+        team1Stats.points += 2;
+      } else {
+        // Loss = 1 point
+        team1Stats.losses++;
+        team1Stats.points += 1;
+      }
     }
 
-    // Update team1 stats
-    const team1Stats = teams.get(match.team1)!;
-    team1Stats.played++;
-    team1Stats.pointsScored += score1;
-    team1Stats.pointsConceded += score2;
-    if (score1 > score2) {
-      team1Stats.wins++;
-      team1Stats.points += 2;
-    } else {
-      team1Stats.losses++;
-      team1Stats.points += 1;
-    }
-
-    // Update team2 stats
-    const team2Stats = teams.get(match.team2)!;
-    team2Stats.played++;
-    team2Stats.pointsScored += score2;
-    team2Stats.pointsConceded += score1;
-    if (score2 > score1) {
-      team2Stats.wins++;
-      team2Stats.points += 2;
-    } else {
-      team2Stats.losses++;
-      team2Stats.points += 1;
+    // Update team2 stats if team exists in the map
+    if (team2Stats) {
+      team2Stats.played++;
+      team2Stats.pointsScored += score2;
+      team2Stats.pointsConceded += score1;
+      if (score2 > score1) {
+        // Win = 2 points
+        team2Stats.wins++;
+        team2Stats.points += 2;
+      } else {
+        // Loss = 1 point
+        team2Stats.losses++;
+        team2Stats.points += 1;
+      }
     }
   });
 
-  // Convert to array and sort by points (descending), then point differential
+  // Convert the final map to array and sort
   return Array.from(teams.entries())
     .map(([team, stats]) => ({
       team,
@@ -230,97 +325,171 @@ function generateGroupStandings(matches: Match[]) {
       pointDiff: stats.pointsScored - stats.pointsConceded,
     }))
     .sort((a, b) => {
-      // Sort by points first
       if (b.points !== a.points) return b.points - a.points;
-      // Then by point differential
-      return b.pointDiff - a.pointDiff;
+      // If points are equal, sort by point differential
+      if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+      // If point differential is also equal, sort by points scored
+      if (b.pointsScored !== a.pointsScored)
+        return b.pointsScored - a.pointsScored;
+      // Finally, sort alphabetically by team name as a tie-breaker
+      return a.team.localeCompare(b.team);
     });
 }
 
-function generateStandingsTable(matches: Match[]) {
-  // Group matches by group name
-  const groupMatches = matches.filter((match) => !match.is_playoff);
+function generateStandingsTable(categoryMatches: Match[]) {
+  // Separate group and playoff matches for this category
+  const groupMatches = categoryMatches.filter((match) => !match.is_playoff);
+  const playoffMatches = categoryMatches.filter((match) => match.is_playoff);
+
+  // Get unique group names within this category
   const groupNames = Array.from(
     new Set(groupMatches.map((match) => match.group_name).filter(Boolean))
-  );
+  ).sort(); // Sort group names alphabetically
 
-  // Get playoff matches
-  const playoffMatches = matches.filter((match) => match.is_playoff);
+  const hasPlayoffMatches = playoffMatches.length > 0;
 
-  // For each group, display standings
+  // Render standings if there are defined groups, even if no matches are played yet.
+  // Render playoffs separately if they exist.
+  if (groupNames.length === 0 && !hasPlayoffMatches) {
+    return (
+      <p className="text-gray-500">
+        No groups or playoff matches scheduled for this category yet.
+      </p>
+    );
+  }
 
   return (
     <>
-      {groupNames.map((groupName) => (
-        <div key={groupName} className="group-standings">
-          <h3>Group {groupName}</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Position</th>
-                <th>Team</th>
-                <th>Played</th>
-                <th>Wins</th>
-                <th>Losses</th>
-                <th>Points</th>
-                <th>Points Scored</th>
-                <th>Points Conceded</th>
-                <th>Point Diff</th>
-              </tr>
-            </thead>
-            <tbody>
-              {generateGroupStandings(
-                matches.filter((match) => match.group_name === groupName)
-              ).map((standing, index) => (
-                <tr
-                  key={standing.team}
-                  className={index < 2 ? "qualifying" : ""}
-                >
-                  <td>{index + 1}</td>
-                  <td>{standing.team}</td>
-                  <td>{standing.played}</td>
-                  <td>{standing.wins}</td>
-                  <td>{standing.losses}</td>
-                  <td>
-                    <strong>{standing.points}</strong>
-                  </td>
-                  <td>{standing.pointsScored}</td>
-                  <td>{standing.pointsConceded}</td>
-                  <td>{standing.pointDiff}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
-      {playoffMatches.length > 0 && (
-        <div className="playoff-section">
-          <h2>Playoff Matches</h2>
-          <div className="playoff-matches">
-            {playoffMatches.map((match) => (
-              <div key={match.id} className="playoff-match">
-                <h4>{match.group_name}</h4>
-                <div className="teams">
-                  <span className="team">{match.team1}</span>
-                  <span className="vs">vs</span>
-                  <span className="team">{match.team2}</span>
-                </div>
-                <div className="match-details">
-                  <div className="date">
-                    {new Date(match.date).toLocaleDateString()}
-                  </div>
-                  {match.time && <span className="time">{match.time}</span>}
-                  {match.location && (
-                    <span className="location">@ {match.location}</span>
-                  )}
-                </div>
-                <div className="score">
-                  {match.score1 !== null && match.score2 !== null
-                    ? `${match.score1} - ${match.score2}`
-                    : "Not played yet"}
-                </div>
+      {groupNames.length > 0 && (
+        <div className="mb-6">
+          <h4 className="text-lg font-semibold mb-2">Group Standings</h4>
+          {groupNames.map((groupName) => (
+            <div key={groupName} className="group-standings mb-4 last:mb-0">
+              <h5 className="text-md font-semibold mb-1">Group {groupName}</h5>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Pos
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Team
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        P
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        W
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        L
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Pts
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        PF
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        PA
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Diff
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {generateGroupStandings(
+                      groupMatches.filter(
+                        (match) => match.group_name === groupName
+                      )
+                    ).map((standing, index) => (
+                      <tr
+                        key={standing.team}
+                        className={index < 2 ? "bg-green-50" : ""} // Highlight top 2 potentially
+                      >
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {index + 1}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap font-medium">
+                          {standing.team}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {standing.played}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {standing.wins}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {standing.losses}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap font-bold">
+                          {standing.points}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {standing.pointsScored}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {standing.pointsConceded}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {standing.pointDiff > 0
+                            ? `+${standing.pointDiff}`
+                            : standing.pointDiff}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {hasPlayoffMatches && (
+        <div className="playoff-section">
+          <h4 className="text-lg font-semibold mb-2">Playoff Matches</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {playoffMatches
+              // Sort playoffs if needed (e.g., by date or type)
+              .sort(
+                (a, b) =>
+                  a.date.localeCompare(b.date) ||
+                  (a.time || "").localeCompare(b.time || "")
+              )
+              .map((match) => (
+                <div
+                  key={match.id}
+                  className="playoff-match border rounded p-3 bg-gray-50"
+                >
+                  <h5 className="text-md font-semibold mb-1">
+                    {match.group_name || "Playoff"}
+                  </h5>
+                  <div className="teams text-sm mb-1">
+                    <span className="team font-medium">{match.team1}</span>
+                    <span className="vs text-gray-500 mx-1">vs</span>
+                    <span className="team font-medium">{match.team2}</span>
+                  </div>
+                  <div className="match-details text-xs text-gray-600 mb-1">
+                    <span>{new Date(match.date).toLocaleDateString()}</span>
+                    {match.time && (
+                      <span className="time mx-1">
+                        {match.time.substring(0, 5)}
+                      </span>
+                    )}
+                    {match.location && (
+                      <span className="location">@ {match.location}</span>
+                    )}
+                  </div>
+                  <div className="score text-sm font-bold">
+                    {match.score1 !== null && match.score2 !== null
+                      ? `${match.score1} - ${match.score2}`
+                      : "Pending"}
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       )}
