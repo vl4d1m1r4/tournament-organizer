@@ -427,18 +427,14 @@ export default function CategoryOverview() {
       {/* Header Bar (remains the same) */}
       <div className="bg-blue-grey-200 py-3 shadow-md w-full z-20">
         <div className="mx-auto flex justify-between px-4 items-baseline">
-          <img
-            src="/images/logo_mladost.png"
-            alt="Left Logo"
-            className="h-10 md:h-12 w-16"
-          />
-          <h1 className="text-xl md:text-xl font-bold text-blue-800 uppercase text-center flex-grow">
+          <img src="/images/rhino_logo.svg" alt="Left Logo" className="w-16" />
+          <h1 className="text-xl md:text-xl font-bold text-blue-800 uppercase text-center flex-grow m-0">
             {tournament.name} - {category.name}
           </h1>
           <img
-            src="/images/logo_mladost.png"
+            src="/images/mladost_logo.svg"
             alt="Right Logo"
-            className="h-10 md:h-12 w-16"
+            className="w-16"
           />
         </div>
       </div>
