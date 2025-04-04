@@ -426,7 +426,7 @@ export default function CategoryOverview() {
     <div className="min-h-screen bg-no-repeat bg-cover bg-center relative flex flex-col">
       {/* Header Bar (remains the same) */}
       <div className="bg-blue-grey-200 py-3 shadow-md w-full z-20">
-        <div className="mx-auto flex justify-between px-4 items-baseline">
+        <div className="mx-auto flex justify-between px-4 items-center">
           <img src="/images/rhino_logo.svg" alt="Left Logo" className="w-16" />
           <h1 className="text-xl md:text-xl font-bold text-blue-800 uppercase text-center flex-grow m-0">
             {tournament.name} - {category.name}
