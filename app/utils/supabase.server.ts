@@ -1,5 +1,9 @@
-import { createServerClient } from "@supabase/auth-helpers-remix";
-import type { Database } from "~/types/database.types";
+import {
+  createServerClient,
+  parseCookieHeader,
+  serializeCookieHeader,
+} from "@supabase/ssr";
+import { Database } from "~/types/database.types";
 
 export const createSupabaseServerClient = ({
   request,
@@ -11,5 +15,25 @@ export const createSupabaseServerClient = ({
   createServerClient<Database>(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_ANON_KEY!,
-    { request, response }
+    {
+      cookies: {
+        async getAll() {
+          const cookies = parseCookieHeader(
+            request.headers.get("Cookie") ?? ""
+          );
+          return cookies.map(({ name, value }) => ({
+            name,
+            value: value ?? "",
+          }));
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.headers.append(
+              "Set-Cookie",
+              serializeCookieHeader(name, value, options)
+            )
+          );
+        },
+      },
+    }
   );

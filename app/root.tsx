@@ -9,7 +9,7 @@ import {
   useLocation,
 } from "@remix-run/react";
 import { LoaderFunctionArgs } from "@remix-run/node";
-import { createBrowserClient } from "@supabase/auth-helpers-remix";
+import { createBrowserClient } from "@supabase/ssr";
 import { useState } from "react";
 import { createSupabaseServerClient } from "./utils/supabase.server";
 import styles from "./styles/global.css?url";
@@ -63,13 +63,15 @@ export default function App() {
                 Basketball Tournament
               </a>
               <div className="flex gap-4">
-                <a href="/tournaments" className="hover:text-blue-300">
-                  Tournaments
-                </a>
                 {user ? (
-                  <a href="/admin/dashboard" className="hover:text-blue-30">
-                    Admin Dashboard
-                  </a>
+                  <>
+                    <a href="/admin/dashboard" className="hover:text-blue-30">
+                      Admin Dashboard
+                    </a>
+                    <a href="/logout" className="hover:text-blue-300">
+                      Logout
+                    </a>
+                  </>
                 ) : (
                   <a href="/login" className="hover:text-blue-300">
                     Admin Login
