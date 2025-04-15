@@ -228,15 +228,28 @@ export default function TournamentDetails() {
 }
 
 function generateGroupStandings(matches: Match[]) {
-  // Extract all unique teams participating in these matches
+  // Extract all unique teams participating in *group* matches
   const allTeams = new Set<string>();
   matches
-    .filter((match) => !match.is_playoff)
+    .filter((match) => !match.is_playoff) // Consider only group matches for initial team list
     .forEach((match) => {
-      allTeams.add(match.team2);
+      // Add team1 if it's a valid team name (not a placeholder)
+      if (
+        match.team1 &&
+        !match.team1.match(/^(?:[1-4](?:st|nd|rd|th)|Winner|Loser)\b/i)
+      ) {
+        allTeams.add(match.team1);
+      }
+      // Add team2 if it's a valid team name (not a placeholder)
+      if (
+        match.team2 &&
+        !match.team2.match(/^(?:[1-4](?:st|nd|rd|th)|Winner|Loser)\b/i)
+      ) {
+        allTeams.add(match.team2);
+      }
     });
 
-  // Initialize standings for all teams with 0 values
+  // Initialize standings for all identified teams with 0 values
   const teams = new Map<
     string,
     {
@@ -259,21 +272,11 @@ function generateGroupStandings(matches: Match[]) {
     });
   });
 
-  // Only consider non-playoff matches with scores for calculation
+  // Only consider completed non-playoff matches for calculation
   const completedGroupMatches = matches.filter(
     (match) =>
       !match.is_playoff && match.score1 !== null && match.score2 !== null
   );
-
-  // If no matches are completed, we still return the initialized zero stats
-  // if (completedGroupMatches.length === 0) {
-  //   // Convert the initialized map to the array format expected
-  //   return Array.from(teams.entries()).map(([team, stats]) => ({
-  //     team,
-  //     ...stats,
-  //     pointDiff: 0,
-  //   }));
-  // }
 
   // Calculate standings based on completed matches
   completedGroupMatches.forEach((match) => {
