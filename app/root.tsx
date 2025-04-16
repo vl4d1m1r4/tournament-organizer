@@ -1,12 +1,15 @@
 import {
+  Link,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  isRouteErrorResponse,
   json,
   useLoaderData,
   useLocation,
+  useRouteError,
 } from "@remix-run/react";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { createBrowserClient } from "@supabase/ssr";
@@ -93,6 +96,59 @@ export default function App() {
             <p>© {new Date().getFullYear()} Basketball Tournament App</p>
           </footer>
         )}
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  let status = 500;
+  let message = "An unexpected error occurred.";
+  let description =
+    "We're sorry, something went wrong. Please try again later.";
+
+  if (isRouteErrorResponse(error)) {
+    status = error.status;
+    message = error.statusText || message;
+    description = error.data?.message || error.data || description;
+  } else if (error instanceof Error) {
+    message = error.message;
+    description =
+      process.env.NODE_ENV === "development"
+        ? error.stack || description
+        : description;
+  }
+
+  console.error("Root Error Boundary caught error:", error);
+
+  return (
+    <html lang="en">
+      <head>
+        <title>Error: {status}</title>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
+        <div className="w-full max-w-md rounded-lg bg-white p-6 text-center shadow-md border border-gray-200">
+          <h1 className="text-2xl font-semibold mb-2 text-gray-800">
+            An unexpected error occurred
+          </h1>
+          <p className="text-sm text-gray-600">Message: {message}</p>
+          <p className="text-sm text-gray-600">Status: {status}</p>
+          <p className="text-sm mb-6 text-gray-700">{description}</p>
+          <Link
+            to="/"
+            reloadDocument
+            className="inline-block px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
+          >
+            Go back home
+          </Link>
+        </div>
         <ScrollRestoration />
         <Scripts />
       </body>
