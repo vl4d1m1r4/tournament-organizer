@@ -141,14 +141,24 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
     case "updateScore": {
       const matchId = formData.get("matchId") as string;
-      const score1 = formData.get("score1") as string;
-      const score2 = formData.get("score2") as string;
+      const score1String = formData.get("score1") as string;
+      const score2String = formData.get("score2") as string;
+
+      // Convert empty strings to null, otherwise parse as integer
+      const score1Value =
+        score1String.trim() === "" ? null : parseInt(score1String, 10);
+      const score2Value =
+        score2String.trim() === "" ? null : parseInt(score2String, 10);
+
+      // Additional check: if parseInt resulted in NaN (e.g., non-numeric input), treat as null
+      const finalScore1 = isNaN(score1Value as number) ? null : score1Value;
+      const finalScore2 = isNaN(score2Value as number) ? null : score2Value;
 
       const { error } = await supabase
         .from("matches")
         .update({
-          score1: parseInt(score1, 10),
-          score2: parseInt(score2, 10),
+          score1: finalScore1,
+          score2: finalScore2,
         })
         .eq("id", matchId);
 
@@ -156,7 +166,13 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         console.error("Error updating score:", error);
         return json({ _action: action, error: error.message });
       }
-      return json({ _action: action });
+      // Return success, potentially with the updated scores if needed on client
+      return json({
+        _action: action,
+        updatedMatchId: matchId,
+        score1: finalScore1,
+        score2: finalScore2,
+      });
     }
 
     case "updateTournament": {
@@ -313,38 +329,22 @@ interface FetcherData {
   error?: string;
 }
 
-// Component for Playoff Match Item
-const PlayoffMatchItem: React.FC<{
-  match: Match;
-  label: string;
-}> = ({ match, label }) => {
-  // Determine text size based on label
-  const labelStyles =
-    label === "FINAL" ? "text-sm font-semibold p-1" : "text-xs p-1"; // Smaller text for 3rd place, etc.
-  const teamBoxStyles =
-    label === "FINAL"
-      ? "p-3 text-lg" // Larger text/padding for Final
-      : "p-2 text-base"; // Slightly smaller padding/text for others
-
-  return (
-    <div className="flex flex-col items-center mb-4">
-      {/* Orange Box for Teams */}
-      <div
-        className={`bg-[#F97316] text-white rounded-t text-center shadow-md w-40 ${teamBoxStyles}`}
-      >
-        {/* Display team names or placeholders */}
-        <div className="font-semibold">{match.team1 || "TBD"}</div>
-        <div className="text-xs my-1">vs</div>
-        <div className="font-semibold">{match.team2 || "TBD"}</div>
-      </div>
-      {/* Blue Box for Label (e.g., FINAL) */}
-      <div
-        className={`bg-[#1D4ED8] text-white rounded-b text-center shadow-md w-40 ${labelStyles}`}
-      >
-        {label}
-      </div>
-    </div>
-  );
+// Helper function to format date as dd.mm.yyyy
+const formatDateDDMMYYYY = (dateString: string | Date): string => {
+  try {
+    const date =
+      typeof dateString === "string" ? new Date(dateString) : dateString;
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // Month is 0-indexed
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  } catch (e) {
+    console.error("Error formatting date:", dateString, e);
+    return "Error";
+  }
 };
 
 export default function AdminTournament() {
@@ -356,7 +356,9 @@ export default function AdminTournament() {
   const [showAddMatch, setShowAddMatch] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [editingCategory, setEditingCategory] = useState<number | null>(null);
-  const [editingMatch, setEditingMatch] = useState<number | null>(null);
+  const [editingMatchDetails, setEditingMatchDetails] = useState<Match | null>(
+    null
+  );
   const [editingTournament, setEditingTournament] = useState(false);
   const [notification, setNotification] = useState<{
     message: string;
@@ -395,67 +397,91 @@ export default function AdminTournament() {
     {}
   );
 
-  // Handle fetcher data changes to show notifications
+  // Handle fetcher data changes
   useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data) {
       const action = fetcher.data._action;
+      const error = fetcher.data.error;
+      let notificationType: "success" | "error" = error ? "error" : "success";
+      let notificationMessage = "";
 
-      if (action === "addCategory") {
+      switch (action) {
+        case "addCategory":
+          notificationMessage = error
+            ? `Error adding category: ${error}`
+            : "Category added successfully!";
+          if (!error) setShowAddCategory(false);
+          break;
+        case "addMatch":
+          notificationMessage = error
+            ? `Error adding match: ${error}`
+            : "Match added successfully!";
+          if (!error) setShowAddMatch(false);
+          break;
+        case "updateScore":
+          notificationMessage = error
+            ? `Error updating score: ${error}`
+            : "Score updated successfully!";
+          break;
+        case "updateTournament":
+          notificationMessage = error
+            ? `Error updating tournament: ${error}`
+            : "Tournament updated successfully!";
+          if (!error) setEditingTournament(false);
+          break;
+        case "updateTournamentStatus":
+          notificationMessage = error
+            ? `Error updating status: ${error}`
+            : "Tournament status updated successfully!";
+          break;
+        case "updateCategory":
+          notificationMessage = error
+            ? `Error updating category: ${error}`
+            : "Category updated successfully!";
+          if (!error) setEditingCategory(null);
+          break;
+        case "updateMatch":
+          notificationMessage = error
+            ? `Error updating match: ${error}`
+            : "Match updated successfully!";
+          // Close the edit panel on success
+          if (!error) setEditingMatchDetails(null);
+          break;
+        case "deleteCategory":
+          notificationMessage = error
+            ? `Error deleting category: ${error}`
+            : "Category deleted successfully!";
+          setDeleteCategoryDialog({
+            isOpen: false,
+            categoryId: null,
+            categoryName: "",
+          });
+          break;
+        case "deleteMatch":
+          notificationMessage = error
+            ? `Error deleting match: ${error}`
+            : "Match deleted successfully!";
+          setDeleteMatchDialog({ isOpen: false, matchId: null, matchName: "" });
+          break;
+        default:
+          // Only show notification if there's a message to show
+          if (error) {
+            notificationMessage = `An unexpected error occurred: ${error}`;
+            notificationType = "error";
+          } else if (action) {
+            // Generic success for unhandled actions? Maybe avoid.
+            // notificationMessage = "Action completed.";
+            // notificationType = "success";
+          } else {
+            return; // No action, no notification
+          }
+      }
+
+      if (notificationMessage) {
         setNotification({
-          message: "Category added successfully!",
-          type: "success",
+          message: notificationMessage,
+          type: notificationType,
         });
-        setShowAddCategory(false);
-      } else if (action === "addMatch") {
-        setNotification({
-          message: "Match added successfully!",
-          type: "success",
-        });
-        setShowAddMatch(false);
-      } else if (action === "updateTournament") {
-        setNotification({
-          message: "Tournament updated successfully!",
-          type: "success",
-        });
-        setEditingTournament(false);
-      } else if (action === "updateTournamentStatus") {
-        setNotification({
-          message: "Tournament status updated successfully!",
-          type: "success",
-        });
-      } else if (action === "updateCategory") {
-        setNotification({
-          message: "Category updated successfully!",
-          type: "success",
-        });
-        setEditingCategory(null);
-      } else if (action === "updateMatch") {
-        setNotification({
-          message: "Match updated successfully!",
-          type: "success",
-        });
-        setEditingMatch(null);
-      } else if (action === "updateScore") {
-        setNotification({
-          message: "Score updated successfully!",
-          type: "success",
-        });
-      } else if (action === "deleteCategory") {
-        setNotification({
-          message: "Category deleted successfully!",
-          type: "success",
-        });
-        setDeleteCategoryDialog({
-          isOpen: false,
-          categoryId: null,
-          categoryName: "",
-        });
-      } else if (action === "deleteMatch") {
-        setNotification({
-          message: "Match deleted successfully!",
-          type: "success",
-        });
-        setDeleteMatchDialog({ isOpen: false, matchId: null, matchName: "" });
       }
     }
   }, [fetcher.state, fetcher.data]);
@@ -484,10 +510,7 @@ export default function AdminTournament() {
     fetcher.submit(formData, { method: "post" });
   };
 
-  const handleScoreSubmit = (
-    event: React.FormEvent<HTMLFormElement>,
-    matchId: number
-  ) => {
+  const handleScoreSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     fetcher.submit(formData, { method: "post" });
@@ -545,10 +568,23 @@ export default function AdminTournament() {
     }
   };
 
+  // Handler for opening the Edit Match side panel
+  const handleEditMatchClick = (match: Match) => {
+    setEditingMatchDetails(match);
+  };
+
+  // Handler for submitting the Edit Match form from the side panel
+  const handleEditMatchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    fetcher.submit(formData, { method: "post" });
+    // Optimistically close? Or wait for fetcher effect? Let's wait.
+  };
+
   const isLoading = fetcher.state === "submitting";
 
   return (
-    <div className="relative">
+    <div className="relative p-4 md:p-8">
       {notification && (
         <div className="fixed top-4 right-4 z-50">
           <Notification
@@ -983,6 +1019,153 @@ export default function AdminTournament() {
         </>
       )}
 
+      {/* Edit Match Side Panel */}
+      {editingMatchDetails && (
+        <>
+          <div
+            className="overlay"
+            onClick={() => setEditingMatchDetails(null)}
+          />
+          <div className="side-panel">
+            <div className="flex justify-between items-center mb-6">
+              <h2>Edit Match</h2>
+              <button
+                className="btn-icon"
+                onClick={() => setEditingMatchDetails(null)}
+                disabled={isLoading}
+              >
+                {/* Close Icon */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleEditMatchSubmit}>
+              <input type="hidden" name="_action" value="updateMatch" />
+              <input
+                type="hidden"
+                name="matchId"
+                value={editingMatchDetails.id}
+              />
+              {/* Include category_id (non-editable usually) or fetch if needed */}
+              {/* <input type="hidden" name="categoryId" value={editingMatchDetails.category_id} /> */}
+              <div className="form-group">
+                <label>Category:</label>
+                <p className="font-medium">
+                  {categories.find(
+                    (c) => c.id === editingMatchDetails.category_id
+                  )?.name || "Unknown"}
+                </p>
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-isPlayoff">Match Type:</label>
+                <select
+                  id="edit-isPlayoff"
+                  name="isPlayoff"
+                  defaultValue={String(editingMatchDetails.is_playoff)}
+                  disabled={isLoading}
+                >
+                  <option value="false">Group Match</option>
+                  <option value="true">Playoff Match</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-groupName">Group/Playoff Name:</label>
+                <input
+                  type="text"
+                  id="edit-groupName"
+                  name="groupName"
+                  defaultValue={editingMatchDetails.group_name || ""}
+                  placeholder="e.g., Group A / FINAL"
+                  disabled={isLoading}
+                />
+                <small>Playoff examples: QUARTER-1, SEMI-2, FINAL</small>
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-team1">Team 1:</label>
+                <input
+                  type="text"
+                  id="edit-team1"
+                  name="team1"
+                  defaultValue={editingMatchDetails.team1}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-team2">Team 2:</label>
+                <input
+                  type="text"
+                  id="edit-team2"
+                  name="team2"
+                  defaultValue={editingMatchDetails.team2}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-date">Date:</label>
+                <input
+                  type="date"
+                  id="edit-date"
+                  name="date"
+                  defaultValue={editingMatchDetails.date}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-time">Time:</label>
+                <input
+                  type="time"
+                  id="edit-time"
+                  name="time"
+                  defaultValue={editingMatchDetails.time || ""}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-location">Location:</label>
+                <input
+                  type="text"
+                  id="edit-location"
+                  name="location"
+                  defaultValue={editingMatchDetails.location || ""}
+                  placeholder="Enter match location"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn btn-primary w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <LoadingSpinner size="sm" />
+                    <span className="ml-2">Saving...</span>
+                  </div>
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+            </form>
+          </div>
+        </>
+      )}
+
       {/* Categories and Matches */}
       {categories.length === 0 ? (
         <div className="section">
@@ -994,8 +1177,11 @@ export default function AdminTournament() {
       ) : (
         <div className="space-y-8">
           {categories.map((category) => (
-            <div key={category.id} className="category-section">
-              <div className="category-header">
+            <div
+              key={category.id}
+              className="category-section border border-gray-200 rounded-lg shadow-sm overflow-hidden"
+            >
+              <div className="category-header bg-gray-50 p-4 flex justify-between items-center border-b border-gray-200">
                 {editingCategory === category.id ? (
                   <form
                     onSubmit={(e) => handleCategorySubmit(e, category.id)}
@@ -1067,15 +1253,18 @@ export default function AdminTournament() {
                   </form>
                 ) : (
                   <>
-                    <h3>{category.name}</h3>
+                    <h3 className="text-xl font-semibold text-blue-900 m-0">
+                      {category.name}
+                    </h3>
                     <div className="flex items-center gap-2">
                       <button
-                        className="btn-icon"
+                        className="btn-icon p-1 text-gray-600 hover:text-blue-700"
                         onClick={() => setEditingCategory(category.id)}
+                        title="Edit Category"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6"
+                          className="h-5 w-5"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -1089,14 +1278,15 @@ export default function AdminTournament() {
                         </svg>
                       </button>
                       <button
-                        className="btn-icon text-red-600"
+                        className="btn-icon p-1 text-gray-600 hover:text-red-700"
                         onClick={() =>
                           handleDeleteCategory(category.id, category.name)
                         }
+                        title="Delete Category"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6"
+                          className="h-5 w-5"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -1111,14 +1301,14 @@ export default function AdminTournament() {
                       </button>
                       <Link
                         to={`/category-overview/${category.id}`}
-                        className="btn-icon text-blue-600"
+                        className="btn-icon p-1 text-gray-600 hover:text-indigo-700"
                         title="Preview Category"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-6 w-6"
+                          className="h-5 w-5"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -1143,250 +1333,195 @@ export default function AdminTournament() {
               </div>
 
               {matchesByCategory[category.id]?.length > 0 ? (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Location</th>
-                      <th>Date & Time</th>
-                      <th>Teams</th>
-                      <th>Score</th>
-                      <th colSpan={2} className="text-right">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matchesByCategory[category.id].map((match) => (
-                      <tr key={match.id}>
-                        {editingMatch === match.id ? (
-                          <td colSpan={4}>
-                            <form
-                              onSubmit={(e) => handleMatchSubmit(e, match.id)}
-                            >
-                              <input
-                                type="hidden"
-                                name="_action"
-                                value="updateMatch"
-                              />
-                              <input
-                                type="hidden"
-                                name="matchId"
-                                value={match.id}
-                              />
-                              <div className="form-group">
-                                <label htmlFor={`location-${match.id}`}>
-                                  Location:
-                                </label>
-                                <input
-                                  type="text"
-                                  id={`location-${match.id}`}
-                                  name="location"
-                                  defaultValue={match.location || ""}
-                                  placeholder="Enter new location"
-                                />
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                          Date/Time/Loc
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                          Team 1
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                          Team 2
+                        </th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Score & Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {matchesByCategory[category.id].map((match) => (
+                        <tr
+                          key={match.id}
+                          className="hover:bg-gray-50 align-middle"
+                        >
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
+                            <div>{formatDateDDMMYYYY(match.date)}</div>
+                            <div className="text-xs text-gray-500">
+                              {match.time
+                                ? match.time.substring(0, 5)
+                                : "--:--"}
+                              {match.location && ` @ ${match.location}`}
+                              {!match.location && ` @ TBD`}
+                            </div>
+                            {match.is_playoff && (
+                              <div className="text-xs text-indigo-600 font-medium mt-1">
+                                {match.group_name || "Playoff"}
                               </div>
-                              <div className="form-group">
-                                <label htmlFor="isPlayoff">Match Type:</label>
-                                <select
-                                  id="isPlayoff"
-                                  name="isPlayoff"
-                                  defaultChecked={match.is_playoff}
-                                >
-                                  <option value="false">Group Match</option>
-                                  <option value="true">Playoff Match</option>
-                                </select>
-                              </div>
+                            )}
+                          </td>
 
-                              <div className="form-group">
-                                <label htmlFor="groupName">Group Name:</label>
+                          <td className="px-3 py-2 whitespace-normal text-sm font-medium text-gray-900">
+                            {match.team1}
+                          </td>
+
+                          <td className="px-3 py-2 whitespace-normal text-sm font-medium text-gray-900">
+                            {match.team2}
+                          </td>
+
+                          <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end items-center gap-3">
+                              <Form
+                                method="post"
+                                onSubmit={handleScoreSubmit}
+                                className="flex items-center gap-1"
+                              >
                                 <input
-                                  type="text"
-                                  id="groupName"
-                                  name="groupName"
-                                  defaultValue={match.group_name || ""}
-                                  placeholder="e.g., Group A"
+                                  type="hidden"
+                                  name="_action"
+                                  value="updateScore"
                                 />
-                                <small>Leave empty for playoff matches</small>
-                              </div>
-                              <div className="form-group">
-                                <label htmlFor={`team1-${match.id}`}>
-                                  Team 1:
-                                </label>
                                 <input
-                                  type="text"
-                                  id={`team1-${match.id}`}
-                                  name="team1"
-                                  defaultValue={match.team1}
-                                  required
+                                  type="hidden"
+                                  name="matchId"
+                                  value={match.id}
                                 />
-                              </div>
-                              <div className="form-group">
-                                <label htmlFor={`team2-${match.id}`}>
-                                  Team 2:
-                                </label>
                                 <input
-                                  type="text"
-                                  id={`team2-${match.id}`}
-                                  name="team2"
-                                  defaultValue={match.team2}
-                                  required
+                                  type="number"
+                                  name="score1"
+                                  defaultValue={match.score1 ?? ""}
+                                  min="0"
+                                  className="border rounded px-2 py-1 w-12 text-sm text-center bg-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                  disabled={isLoading}
+                                  aria-label="Team 1 Score"
+                                  placeholder="S1"
                                 />
-                              </div>
-                              <div className="form-group">
-                                <label htmlFor={`date-${match.id}`}>
-                                  Date:
-                                </label>
+                                <span className="text-gray-400">-</span>
                                 <input
-                                  type="date"
-                                  id={`date-${match.id}`}
-                                  name="date"
-                                  defaultValue={match.date}
-                                  required
+                                  type="number"
+                                  name="score2"
+                                  defaultValue={match.score2 ?? ""}
+                                  min="0"
+                                  className="border rounded px-2 py-1 w-12 text-sm text-center bg-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                  disabled={isLoading}
+                                  aria-label="Team 2 Score"
+                                  placeholder="S2"
                                 />
-                              </div>
-                              <div className="form-group">
-                                <label htmlFor={`time-${match.id}`}>
-                                  Time:
-                                </label>
-                                <input
-                                  type="time"
-                                  id={`time-${match.id}`}
-                                  name="time"
-                                  defaultValue={match.time || ""}
-                                />
-                              </div>
-                              <div className="form-actions">
                                 <button
                                   type="submit"
-                                  className="btn btn-primary"
+                                  className="btn-icon p-1 text-gray-600 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={isLoading}
+                                  title="Update Score"
                                 >
-                                  {isLoading ? (
-                                    <LoadingSpinner size="md" />
+                                  {isLoading &&
+                                  fetcher.formData?.get("matchId") ===
+                                    String(match.id) &&
+                                  fetcher.formData?.get("_action") ===
+                                    "updateScore" ? (
+                                    <LoadingSpinner size="sm" />
                                   ) : (
-                                    "Save"
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-5 w-5"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M5 13l4 4L19 7"
+                                      />
+                                    </svg>
                                   )}
                                 </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary"
-                                  onClick={() => setEditingMatch(null)}
-                                  disabled={isLoading}
+                              </Form>
+
+                              <button
+                                type="button"
+                                className="btn-icon p-1 text-gray-600 hover:text-blue-700 disabled:opacity-50"
+                                onClick={() => handleEditMatchClick(match)}
+                                disabled={isLoading}
+                                title="Edit Match Details"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
                                 >
-                                  Cancel
-                                </button>
-                              </div>
-                            </form>
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                  />
+                                </svg>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="btn-icon p-1 text-gray-600 hover:text-red-700 disabled:opacity-50"
+                                onClick={() =>
+                                  handleDeleteMatch(
+                                    match.id,
+                                    match.team1,
+                                    match.team2
+                                  )
+                                }
+                                disabled={isLoading}
+                                title="Delete Match"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
                           </td>
-                        ) : (
-                          <>
-                            <td>{match.location || "Not specified"}</td>
-                            <td>
-                              {new Date(match.date).toLocaleDateString()}
-                              {match.time && ` ${match.time}`}
-                            </td>
-                            <td>
-                              {match.team1} vs {match.team2}
-                            </td>
-                            <td>
-                              {match.score1 !== null && match.score2 !== null
-                                ? `${match.score1} - ${match.score2}`
-                                : "Not played yet"}
-                            </td>
-                            <td>
-                              <div style={{ display: "flex", gap: "0.5rem" }}>
-                                <form
-                                  onSubmit={(e) =>
-                                    handleScoreSubmit(e, match.id)
-                                  }
-                                >
-                                  <input
-                                    type="hidden"
-                                    name="_action"
-                                    value="updateScore"
-                                  />
-                                  <input
-                                    type="hidden"
-                                    name="matchId"
-                                    value={match.id}
-                                  />
-                                  <div
-                                    style={{ display: "flex", gap: "0.5rem" }}
-                                  >
-                                    <input
-                                      type="number"
-                                      name="score1"
-                                      defaultValue={match.score1 || ""}
-                                      min="0"
-                                      className="border rounded px-2 py-1 w-16 text-right bg-white shadow-sm"
-                                      disabled={isLoading}
-                                    />
-                                    <span>-</span>
-                                    <input
-                                      type="number"
-                                      name="score2"
-                                      defaultValue={match.score2 || ""}
-                                      min="0"
-                                      className="border rounded px-2 py-1 w-16 text-right bg-white shadow-sm"
-                                      disabled={isLoading}
-                                    />
-                                    <button
-                                      type="submit"
-                                      className="btn btn-neutral"
-                                      disabled={isLoading}
-                                    >
-                                      {isLoading ? (
-                                        <LoadingSpinner size="md" />
-                                      ) : (
-                                        "Update Score"
-                                      )}
-                                    </button>
-                                  </div>
-                                </form>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="flex gap-2">
-                                <button
-                                  className="btn btn-secondary"
-                                  onClick={() => setEditingMatch(match.id)}
-                                  disabled={isLoading}
-                                >
-                                  Edit Match
-                                </button>
-                                <button
-                                  className="btn btn-danger"
-                                  onClick={() =>
-                                    handleDeleteMatch(
-                                      match.id,
-                                      match.team1,
-                                      match.team2
-                                    )
-                                  }
-                                  disabled={isLoading}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <p>No matches scheduled for this category.</p>
+                <p className="text-gray-500 p-4">
+                  No matches scheduled for this category.
+                </p>
               )}
             </div>
           ))}
         </div>
       )}
 
-      <div className="form-actions" style={{ marginTop: "2rem" }}>
+      <div className="mt-8 flex gap-4">
         <button
           type="button"
-          className="btn btn-primary"
+          className="btn btn-secondary"
           onClick={() => navigate(`/tournaments/${tournament.id}`)}
           disabled={isLoading}
         >
@@ -1394,7 +1529,7 @@ export default function AdminTournament() {
         </button>
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn btn-neutral"
           onClick={() => navigate("/admin/dashboard")}
           disabled={isLoading}
         >
