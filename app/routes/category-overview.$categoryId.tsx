@@ -187,7 +187,7 @@ const GroupTable: React.FC<{
       {location && (
         /* Reduced padding and font size, added truncate */
         <div
-          className="bg-[#F97316] text-white text-center p-1 truncate w-32 mx-auto"
+          className="bg-[#F97316] text-xs text-white text-center p-1 w-32 mx-auto"
           title={location}
         >
           {location}
@@ -197,12 +197,11 @@ const GroupTable: React.FC<{
   );
 };
 
-// Component for Playoff Match Item - Horizontal Teams (Corrected Syntax)
+// Component for Playoff Match Item - Updated to include date/time/location
 const PlayoffMatchItem: React.FC<{ match: Match }> = ({ match }) => {
   const label = match.group_name || "PLAYOFF";
   const isFinal = label.toUpperCase() === "FINAL";
 
-  // Adjust styles for horizontal layout
   const labelStyles = isFinal
     ? "text-md font-semibold py-2 px-4" // Slightly more padding for final label
     : "text-sm py-1 px-4";
@@ -211,37 +210,39 @@ const PlayoffMatchItem: React.FC<{ match: Match }> = ({ match }) => {
     : "p-2 text-sm"; // Reduced padding for other teams
 
   return (
-    // Adjusted width constraints, ensures centering
     <div className="flex flex-col items-center mb-4 w-auto min-w-[180px]">
       {/* Orange Box - Horizontal Teams */}
       <div
         className={`bg-[#F97316] text-white rounded-t text-center shadow-md w-full ${teamBoxStyles}`}
       >
-        {/* Flex row for horizontal layout, center items, add gap */}
-        <div className="flex items-center justify-center gap-2 font-semibold whitespace-nowrap overflow-hidden">
-          {/* Use flex-1 to allow truncation, text-right/left for alignment */}
-          <span
-            className="truncate flex-1 text-right"
-            title={match.team1 || "TBD"}
-          >
+        <div className="flex items-center justify-center gap-2 font-semibold whitespace-nowrap">
+          <span className="flex-1 text-right" title={match.team1 || "TBD"}>
             {match.team1 || "TBD"}
           </span>
           <span className="text-xs font-normal opacity-80 flex-shrink-0">
             vs
           </span>
-          <span
-            className="truncate flex-1 text-left"
-            title={match.team2 || "TBD"}
-          >
+          <span className="flex-1 text-left" title={match.team2 || "TBD"}>
             {match.team2 || "TBD"}
           </span>
         </div>
       </div>
-      {/* Blue Box for Label - Full width */}
+      {/* Blue Box for Label */}
       <div
-        className={`bg-[#1D4ED8] text-white rounded-b text-center shadow-md w-full ${labelStyles}`}
+        className={`bg-[#1D4ED8] text-white text-center shadow-md w-full ${labelStyles}`}
+        // Note: removed rounded-b here if date/time box is added below
       >
         {label.toUpperCase()}
+      </div>
+      {/* New Box for Date/Time/Location */}
+      <div className="bg-gray-700/70 text-white text-xs text-center p-1 rounded-b shadow-md w-full">
+        <span>{formatDate(match.date)}</span>
+        {match.time && <span> | {formatTime(match.time)}</span>}
+        {match.location && (
+          <span className="block" title={match.location}>
+            {match.location}
+          </span>
+        )}
       </div>
     </div>
   );

@@ -3,6 +3,24 @@ import { useLoaderData } from "@remix-run/react";
 import { useState } from "react";
 import { createSupabaseServerClient } from "~/utils/supabase.server";
 
+// Helper function to format date as dd.mm.yyyy
+const formatDateDDMMYYYY = (dateString: string | Date): string => {
+  try {
+    const date =
+      typeof dateString === "string" ? new Date(dateString) : dateString;
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // Month is 0-indexed
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  } catch (e) {
+    console.error("Error formatting date:", dateString, e);
+    return "Error";
+  }
+};
+
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   const tournamentId = params.tournamentId;
   const response = new Response();
@@ -107,8 +125,8 @@ export default function TournamentDetails() {
         Status: <span className="font-semibold">{tournament.status}</span>
       </p>
       <p className="mb-6">
-        Dates: {new Date(tournament.start_date).toLocaleDateString()} -{" "}
-        {new Date(tournament.end_date).toLocaleDateString()}
+        Dates: {formatDateDDMMYYYY(tournament.start_date)} -{" "}
+        {formatDateDDMMYYYY(tournament.end_date)}
       </p>
 
       {categories.length === 0 ? (
@@ -183,7 +201,7 @@ export default function TournamentDetails() {
                           <tr key={match.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               <div>
-                                {new Date(match.date).toLocaleDateString()}{" "}
+                                {formatDateDDMMYYYY(match.date)}{" "}
                                 {match.time && ` ${match.time.substring(0, 5)}`}
                               </div>
                               <div className="text-xs text-gray-500">
@@ -476,7 +494,7 @@ function generateStandingsTable(categoryMatches: Match[]) {
                     <span className="team font-medium">{match.team2}</span>
                   </div>
                   <div className="match-details text-xs text-gray-600 mb-1">
-                    <span>{new Date(match.date).toLocaleDateString()}</span>
+                    <span>{formatDateDDMMYYYY(match.date)}</span>
                     {match.time && (
                       <span className="time mx-1">
                         {match.time.substring(0, 5)}
