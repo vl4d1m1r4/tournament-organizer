@@ -10,6 +10,7 @@ import {
   useLoaderData,
   useLocation,
   useRouteError,
+  useSearchParams,
 } from "@remix-run/react";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { createBrowserClient } from "@supabase/ssr";
@@ -46,9 +47,15 @@ export default function App() {
     createBrowserClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY)
   );
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+
   const isCategoryOverview = location.pathname.startsWith(
     "/category-overview/"
   );
+
+  const isContentOnly = searchParams.get("contentOnly") === "true";
+
+  const isMinimalLayout = isContentOnly || isCategoryOverview;
 
   return (
     <html lang="en">
@@ -59,7 +66,7 @@ export default function App() {
         <Links />
       </head>
       <body>
-        {!isCategoryOverview && (
+        {!isMinimalLayout && (
           <header>
             <nav className="flex justify-between items-center p-4 shadow-md text-blue-100">
               <a href="/" className="text-lg font-semibold">
@@ -84,14 +91,14 @@ export default function App() {
             </nav>
           </header>
         )}
-        {!isCategoryOverview ? (
+        {isMinimalLayout ? (
+          <Outlet context={{ supabase, user }} />
+        ) : (
           <main>
             <Outlet context={{ supabase, user }} />
           </main>
-        ) : (
-          <Outlet context={{ supabase, user }} />
         )}
-        {!isCategoryOverview && (
+        {!isMinimalLayout && (
           <footer>
             <p>© {new Date().getFullYear()} Basketball Tournament App</p>
           </footer>
