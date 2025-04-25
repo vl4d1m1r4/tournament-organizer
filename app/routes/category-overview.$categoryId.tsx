@@ -158,7 +158,7 @@ const GroupTable: React.FC<{
         {!rightAlign && (
           <div className="font-bold text-base mb-1 flex items-center justify-center">
             {/* Smaller circle */}
-            <span className="text-white bg-blue-800/80 h-5 w-5 flex items-center justify-center mt-1 p-4">
+            <span className="text-white bg-blue-800/80 h-5 w-5 whitespace-nowrap flex items-center justify-center mt-1 p-4">
               {group}
             </span>
           </div>
@@ -178,7 +178,7 @@ const GroupTable: React.FC<{
         {rightAlign && (
           <div className="font-bold text-base mb-1 flex items-center justify-center">
             {/* Smaller circle */}
-            <span className="text-white bg-blue-800/80 h-5 w-5 flex items-center justify-center mt-1 p-4">
+            <span className="text-white bg-blue-800/80 h-5 w-5 whitespace-nowrap flex items-center justify-center mt-1 p-4">
               {group}
             </span>
           </div>
