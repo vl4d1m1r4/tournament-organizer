@@ -295,7 +295,37 @@ export default function CategoryOverview() {
         .filter((match: Match) => !match.is_playoff && match.group_name)
         .map((match: Match) => match.group_name!)
     )
-  ).sort();
+  ).sort((a, b) => {
+    const aIsLetter = /^[A-Za-z]/.test(a);
+    const bIsLetter = /^[A-Za-z]/.test(b);
+    const aIsNumber = /^\d/.test(a);
+    const bIsNumber = /^\d/.test(b);
+
+    if (aIsLetter && bIsNumber) return -1; // Letters before numbers
+    if (aIsNumber && bIsLetter) return 1; // Numbers after letters
+
+    if (aIsLetter && bIsLetter) {
+      return a.localeCompare(b); // Sort letters alphabetically
+    }
+
+    if (aIsNumber && bIsNumber) {
+      // Try numeric sort first, fallback to locale compare if not pure numbers
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return a.localeCompare(b);
+    }
+
+    // Fallback for mixed types or other characters (e.g., special symbols)
+    return a.localeCompare(b);
+  });
+
+  // Calculate midpoint for splitting groups visually
+  const midPoint = Math.ceil(groupNames.length / 2);
+  const leftGroupNames = groupNames.slice(0, midPoint);
+  const rightGroupNames = groupNames.slice(midPoint);
 
   // Find the earliest date among all group matches to determine team list display date
   const allGroupMatchDates = Array.from(
@@ -425,7 +455,7 @@ export default function CategoryOverview() {
   // --- Render ---
   return (
     <div className="min-h-screen bg-no-repeat bg-cover bg-center relative flex flex-col">
-      {/* Header Bar (remains the same) */}
+      {/* Header Bar */}
       <div className="bg-blue-grey-200 py-3 shadow-md w-full z-20">
         <div className="mx-auto flex justify-between px-4 items-center">
           <img src="/images/rhino_logo.svg" alt="Left Logo" className="w-16" />
@@ -445,70 +475,72 @@ export default function CategoryOverview() {
         className="flex-grow p-4 md:p-8 bg-no-repeat bg-cover bg-center relative"
         style={{ backgroundImage: "url('/images/background.svg')" }}
       >
-        {/* Grid container */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] gap-4 md:gap-8 items-start max-w-6xl mx-auto relative z-10 order-1">
-          {/* --- Group Column 1 --- */}
-          {groupNames.length > 0 && (
-            <div className="flex flex-col">
+        {/* Main Grid container (Group Tables & Playoffs) */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-8 items-start max-w-6xl mx-auto relative z-10">
+          {/* --- Left Group Column --- */}
+          <div className="flex flex-col space-y-4 md:col-start-1">
+            {leftGroupNames.map((groupName) => (
               <GroupTable
-                group={groupNames[0]}
-                teams={getUniqueTeams(groupNames[0])}
-                location={getUniqueLocation(groupNames[0])}
+                key={groupName}
+                group={groupName}
+                teams={getUniqueTeams(groupName)}
+                location={getUniqueLocation(groupName)}
               />
-            </div>
-          )}
-          {groupNames.length === 0 && (
-            <div className="text-white/70 text-center col-span-1 md:col-span-3">
-              No group matches found.
-            </div>
-          )}
+            ))}
+            {groupNames.length === 0 && (
+              <div className="text-white/70 text-center md:col-span-3">
+                 No group matches found.
+              </div>
+            )}
+          </div>
+
           {/* --- Center Column (Playoffs) --- */}
-          {groupNames.length > 0 && (
-            <div className="flex flex-col items-center justify-start space-y-4 pt-8 order-last md:order-2">
-              {playoffMatches.length > 0 ? (
-                playoffMatches.map((match: Match) => (
-                  <PlayoffMatchItem key={match.id} match={match} />
-                ))
-              ) : (
-                <p className="text-white/70 mt-8">Playoffs TBD</p>
-              )}
-            </div>
-          )}
-          {/* --- Group Column 2 --- */}
-          {groupNames.length > 1 && (
-            <div className="flex flex-col order-3">
+          <div className="flex flex-col items-center justify-start space-y-4 pt-8 md:col-start-2 order-last md:order-none">
+            {playoffMatches.length > 0 && (
+              playoffMatches.map((match: Match) => (
+                <PlayoffMatchItem key={match.id} match={match} />
+              ))
+            )}
+          </div>
+
+          {/* --- Right Group Column --- */}
+          <div className="flex flex-col space-y-4 md:col-start-3 order-3">
+             {rightGroupNames.map((groupName) => (
               <GroupTable
-                group={groupNames[1]}
+                key={groupName}
+                group={groupName}
                 rightAlign={true}
-                teams={getUniqueTeams(groupNames[1])}
-                location={getUniqueLocation(groupNames[1])}
+                teams={getUniqueTeams(groupName)}
+                location={getUniqueLocation(groupName)}
               />
-            </div>
-          )}
-          {groupNames.length === 1 && <div />}{" "}
-          {/* Empty div to maintain grid structure */}
-          {/* --- Match Lists Row (Below Grid) --- */}
-          {/* This row spans all 3 columns */}
-          <div className="col-span-1 md:col-span-3 flex flex-col md:flex-row gap-4 md:gap-8 justify-between mt-4 order-4">
-            {/* Group 1 Matches */}
-            {groupNames.length > 0 && (
-              <GroupMatchesColumn
-                matchesByDate={matchesByGroupThenDate[groupNames[0]] || {}}
-              />
-            )}
-            {/* Optional: Spacer or divider if needed between group match lists */}
-            {/* {groupNames.length > 1 && <div className="border-l border-gray-600 hidden md:block"></div>} */}
-            {/* Group 2 Matches */}
-            {groupNames.length > 1 && (
-              <GroupMatchesColumn
-                matchesByDate={matchesByGroupThenDate[groupNames[1]] || {}}
-              />
-            )}
-            {/* Handle case with only one group */}
-            {groupNames.length === 1 && <div className="flex-1"></div>}{" "}
-            {/* Fills space if only one group */}
+            ))}
           </div>
         </div>
+
+        {/* Match Lists Section (Below Main Grid) */}
+        {groupNames.length > 0 && (
+          <div className="mt-8 max-w-6xl mx-auto relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+            {/* Left Column for Left Group Matches */}
+            <div className="flex flex-col space-y-4">
+              {leftGroupNames.map((groupName) => (
+                <GroupMatchesColumn
+                  key={groupName}
+                  matchesByDate={matchesByGroupThenDate[groupName] || {}}
+                />
+              ))}
+            </div>
+
+            {/* Right Column for Right Group Matches */}
+            <div className="flex flex-col space-y-4 md:items-end">
+              {rightGroupNames.map((groupName) => (
+                 <GroupMatchesColumn
+                   key={groupName}
+                   matchesByDate={matchesByGroupThenDate[groupName] || {}}
+                 />
+              ))}
+            </div>
+           </div>
+        )}
       </div>
     </div>
   );
