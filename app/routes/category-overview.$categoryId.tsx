@@ -187,7 +187,7 @@ const GroupTable: React.FC<{
       {location && (
         /* Reduced padding and font size, added truncate */
         <div
-          className="bg-[#F97316] text-xs text-white text-center p-1 w-32 mx-auto"
+          className="bg-[#F97316] text-xs text-white text-center p-1 w-1/2 mx-auto"
           title={location}
         >
           {location}
