@@ -124,9 +124,7 @@ const formatTime = (timeString: string | null): string => {
 // Component for a single match item in the list
 const MatchItem: React.FC<{ match: Match }> = ({ match }) => {
   return (
-    <div className="flex items-center mb-2 items-stretch w-full md:w-64">
-      {" "}
-      {/* Fixed width */}
+    <div className="flex items-center mb-2 items-stretch w-full">
       {/* Date/Time Box */}
       <div className="flex flex-col bg-[#F97316] text-white p-2 text-center w-16 content-center flex-shrink-0">
         <div className="text-xs font-semibold">{formatDate(match.date)}</div>
@@ -255,17 +253,22 @@ const GroupMatchesColumn: React.FC<{ matchesByDate: MatchesByDate }> = ({
   const sortedDates = Object.keys(matchesByDate).sort((a, b) =>
     a.localeCompare(b)
   );
+  const numberOfDays = sortedDates.length;
 
-  if (sortedDates.length === 0) {
+  if (numberOfDays === 0) {
     return null; // Or some placeholder if needed
   }
 
+  let gridColsClass = "grid-cols-1";
+  if (numberOfDays >= 2) gridColsClass += " md:grid-cols-2";
+  if (numberOfDays >= 3) gridColsClass += " lg:grid-cols-3";
+
   return (
-    <div className="flex-col mt-4 flex md:flex-row gap-4 overflow-x-auto pb-2">
+    <div className={`grid ${gridColsClass} gap-4 mt-4 w-full`}>
       {sortedDates.map((date) => {
         const dailyMatches = matchesByDate[date];
         return (
-          <div key={date} className="flex flex-col flex-shrink-0">
+          <div key={date} className="flex flex-col">
             {/* Column for each day */}
             <div className="text-center font-semibold text-white bg-blue-800/80 rounded py-1 mb-2 text-xs">
               {formatDate(date)} {/* Date Header */}
@@ -452,6 +455,24 @@ export default function CategoryOverview() {
       return a.time.localeCompare(b.time);
     });
 
+  const hasPlayoffs = playoffMatches.length > 0;
+  const numberOfGroups = groupNames.length;
+
+  let mainGridClasses =
+    "grid grid-cols-1 gap-4 md:gap-8 items-start max-w-6xl mx-auto relative z-10";
+
+  if (numberOfGroups > 1) {
+    // Default: Left Groups (1fr), Center Playoffs (auto), Right Groups (1fr)
+    mainGridClasses += " md:grid-cols-[1fr_auto_1fr]";
+  } else if (numberOfGroups === 1 && hasPlayoffs) {
+    // One Group (2fr), Playoffs (1fr)
+    mainGridClasses += " md:grid-cols-[2fr_1fr]";
+  } else {
+    // One Group, No Playoffs OR No Groups, Yes Playoffs OR No Groups, No Playoffs
+    // All these cases use a single centered column layout.
+    mainGridClasses += " md:grid-cols-1";
+  }
+
   // --- Render ---
   return (
     <div className="min-h-screen bg-no-repeat bg-cover bg-center relative flex flex-col">
@@ -476,70 +497,111 @@ export default function CategoryOverview() {
         style={{ backgroundImage: "url('/images/background.svg')" }}
       >
         {/* Main Grid container (Group Tables & Playoffs) */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-8 items-start max-w-6xl mx-auto relative z-10">
-          {/* --- Left Group Column --- */}
-          <div className="flex flex-col space-y-4 md:col-start-1">
-            {leftGroupNames.map((groupName) => (
-              <GroupTable
-                key={groupName}
-                group={groupName}
-                teams={getUniqueTeams(groupName)}
-                location={getUniqueLocation(groupName)}
-              />
-            ))}
-            {groupNames.length === 0 && (
-              <div className="text-white/70 text-center md:col-span-3">
-                 No group matches found.
-              </div>
-            )}
-          </div>
+        <div className={mainGridClasses}>
+          {/* Column 1: Left Groups OR Single Group */}
+          {numberOfGroups > 0 && (
+            <div
+              className={`flex flex-col space-y-4 ${
+                // Center single group column if it's the only thing (no playoffs)
+                numberOfGroups === 1 && !hasPlayoffs
+                  ? "md:w-2/3 md:mx-auto"
+                  : ""
+              } ${
+                // Explicitly set start col for clarity, though implicit in some cases
+                numberOfGroups > 1 || (numberOfGroups === 1 && hasPlayoffs)
+                  ? "md:col-start-1"
+                  : ""
+              }`}
+            >
+              {(numberOfGroups === 1 ? groupNames : leftGroupNames).map(
+                (groupName) => (
+                  <GroupTable
+                    key={groupName}
+                    group={groupName}
+                    teams={getUniqueTeams(groupName)}
+                    location={getUniqueLocation(groupName)}
+                  />
+                )
+              )}
+            </div>
+          )}
 
-          {/* --- Center Column (Playoffs) --- */}
-          <div className="flex flex-col items-center justify-start space-y-4 pt-8 md:col-start-2 order-last md:order-none">
-            {playoffMatches.length > 0 && (
-              playoffMatches.map((match: Match) => (
+          {/* Column 2: Playoffs */}
+          {hasPlayoffs && (
+            <div
+              className={`flex flex-col items-center justify-start space-y-4 pt-8 order-last md:order-none ${
+                // Ensure playoffs are visually after groups on mobile if multiple cols
+                numberOfGroups > 1 ? "md:col-start-2" : ""
+              } ${
+                numberOfGroups === 1 && hasPlayoffs ? "md:col-start-2" : ""
+              } ${
+                numberOfGroups === 0
+                  ? "md:col-start-1" // Center (in 1-col grid) if no groups
+                  : ""
+              }`}
+            >
+              {playoffMatches.map((match: Match) => (
                 <PlayoffMatchItem key={match.id} match={match} />
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
 
-          {/* --- Right Group Column --- */}
-          <div className="flex flex-col space-y-4 md:col-start-3 order-3">
-             {rightGroupNames.map((groupName) => (
-              <GroupTable
-                key={groupName}
-                group={groupName}
-                rightAlign={true}
-                teams={getUniqueTeams(groupName)}
-                location={getUniqueLocation(groupName)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Match Lists Section (Below Main Grid) */}
-        {groupNames.length > 0 && (
-          <div className="mt-8 max-w-6xl mx-auto relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-            {/* Left Column for Left Group Matches */}
-            <div className="flex flex-col space-y-4">
-              {leftGroupNames.map((groupName) => (
-                <GroupMatchesColumn
+          {/* Column 3: Right Groups */}
+          {numberOfGroups > 1 && (
+            <div className="flex flex-col space-y-4 md:col-start-3 order-3">
+              {rightGroupNames.map((groupName) => (
+                <GroupTable
                   key={groupName}
-                  matchesByDate={matchesByGroupThenDate[groupName] || {}}
+                  group={groupName}
+                  rightAlign={true}
+                  teams={getUniqueTeams(groupName)}
+                  location={getUniqueLocation(groupName)}
                 />
               ))}
             </div>
+          )}
+
+          {/* No Matches Message */}
+          {numberOfGroups === 0 && !hasPlayoffs && (
+            <div className="text-white/70 text-center md:col-start-1 py-8">
+              No group or playoff matches found for this category.
+            </div>
+          )}
+        </div>
+
+        {/* Match Lists Section (Below Main Grid) */}
+        {numberOfGroups > 0 && ( // Only show if there are groups
+          <div
+            className={`mt-8 max-w-6xl mx-auto relative z-10 grid grid-cols-1 ${
+              numberOfGroups > 1 ? "md:grid-cols-2" : "md:grid-cols-1" // Two columns only if more than one group
+            } gap-4 md:gap-8`}
+          >
+            {/* Left/Single Column for Group Matches */}
+            <div
+              className={`flex flex-col space-y-4 ${
+                numberOfGroups === 1 ? "md:w-2/3 md:mx-auto" : "" // Center single group's match list
+              }`}
+            >
+              {(numberOfGroups === 1 ? groupNames : leftGroupNames).map(
+                (groupName) => (
+                  <GroupMatchesColumn
+                    matchesByDate={matchesByGroupThenDate[groupName] || {}}
+                  />
+                )
+              )}
+            </div>
 
             {/* Right Column for Right Group Matches */}
-            <div className="flex flex-col space-y-4 md:items-end">
-              {rightGroupNames.map((groupName) => (
-                 <GroupMatchesColumn
-                   key={groupName}
-                   matchesByDate={matchesByGroupThenDate[groupName] || {}}
-                 />
-              ))}
-            </div>
-           </div>
+            {numberOfGroups > 1 && (
+              <div className="flex flex-col space-y-4 md:items-end">
+                {rightGroupNames.map((groupName) => (
+                  <GroupMatchesColumn
+                    matchesByDate={matchesByGroupThenDate[groupName] || {}}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
