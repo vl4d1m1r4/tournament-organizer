@@ -603,6 +603,16 @@ export default function CategoryOverview() {
             )}
           </div>
         )}
+        <div className="max-w-6xl mx-auto relative z-10 mt-8 text-center text-white">
+          <p className="font-bold text-lg md:text-xl mb-2 [text-shadow:1px_1px_3px_rgba(0,0,0,0.7)]">
+            Tournament Opening SATURDAY 03.05.2025 at 18:00 in the sports hall
+            Dr. Jovan Kalauzi
+          </p>
+          <p className="font-bold text-lg md:text-xl [text-shadow:1px_1px_3px_rgba(0,0,0,0.7)]">
+            Отварање на турнирот САБОТА 03.05.2025г во 18:00 часот во спортска
+            сала Д-р Јован Калаузи
+          </p>
+        </div>
       </div>
     </div>
   );
