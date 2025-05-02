@@ -52,7 +52,7 @@ export default function MatchEditForm({ match, categories, onClose, afterSubmit 
   
   return (
     <>
-      <div className="overlay" onClick={onClose} />
+      <div className="overlay" onClick={onClose}></div>
       <div className="side-panel">
         <div className="flex justify-between items-center mb-6">
           <h2>Edit Match</h2>
@@ -77,6 +77,7 @@ export default function MatchEditForm({ match, categories, onClose, afterSubmit 
             </svg>
           </button>
         </div>
+        
         <form onSubmit={handleSubmit}>
           <input type="hidden" name="_action" value="updateMatch" />
           <input type="hidden" name="matchId" value={match.id} />

@@ -121,7 +121,7 @@
   }
 
   .side-panel {
-    @apply fixed right-0 top-0 h-full w-96 bg-white shadow-lg p-6 overflow-y-auto transform transition-transform duration-300;
+    @apply fixed right-0 top-0 h-full w-96 bg-white shadow-lg p-6 overflow-y-auto transform transition-transform duration-300 z-50;
   }
 
   .side-panel.hidden {
@@ -129,7 +129,7 @@
   }
 
   .overlay {
-    @apply fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300;
+    @apply fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300 z-40;
   }
 
   .overlay.hidden {
