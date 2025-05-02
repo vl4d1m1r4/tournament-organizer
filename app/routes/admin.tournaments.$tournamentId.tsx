@@ -16,6 +16,7 @@ import { createSupabaseServerClient } from "~/utils/supabase.server";
 import LoadingSpinner from "~/components/LoadingSpinner";
 import Notification from "~/components/Notification";
 import ConfirmDialog from "~/components/ConfirmDialog";
+import MatchEditForm from "~/components/MatchEditForm";
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   const tournamentId = params.tournamentId;
@@ -236,6 +237,18 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       const date = formData.get("date") as string;
       const time = formData.get("time") as string;
       const location = formData.get("location") as string;
+      const score1String = formData.get("score1") as string;
+      const score2String = formData.get("score2") as string;
+
+      // Convert empty strings to null, otherwise parse as integer for scores
+      const score1Value =
+        score1String?.trim() === "" ? null : parseInt(score1String, 10);
+      const score2Value =
+        score2String?.trim() === "" ? null : parseInt(score2String, 10);
+
+      // Additional check: if parseInt resulted in NaN (e.g., non-numeric input), treat as null
+      const finalScore1 = isNaN(score1Value as number) ? null : score1Value;
+      const finalScore2 = isNaN(score2Value as number) ? null : score2Value;
 
       const { error } = await supabase
         .from("matches")
@@ -247,6 +260,8 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
           date,
           time: time || null,
           location,
+          score1: finalScore1,
+          score2: finalScore2,
         })
         .eq("id", matchId);
 
@@ -573,12 +588,20 @@ export default function AdminTournament() {
     setEditingMatchDetails(match);
   };
 
-  // Handler for submitting the Edit Match form from the side panel
-  const handleEditMatchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    fetcher.submit(formData, { method: "post" });
-    // Optimistically close? Or wait for fetcher effect? Let's wait.
+  // Handler for edit match completion
+  const handleMatchEditComplete = (data: any) => {
+    if (data.error) {
+      setNotification({
+        message: `Error updating match: ${data.error}`,
+        type: "error"
+      });
+    } else {
+      setNotification({
+        message: "Match updated successfully!",
+        type: "success"
+      });
+      setEditingMatchDetails(null);
+    }
   };
 
   const isLoading = fetcher.state === "submitting";
@@ -750,6 +773,12 @@ export default function AdminTournament() {
             )}
           </h1>
           <div className="flex gap-4">
+            <Link
+              to={`/admin/matches-by-location/${tournament.id}`}
+              className="btn btn-primary"
+            >
+              Matches by Location
+            </Link>
             <button
               className="btn btn-neutral"
               onClick={() => setShowAddCategory(!showAddCategory)}
@@ -820,6 +849,16 @@ export default function AdminTournament() {
           </div>
         </div>
       </div>
+
+      {/* Edit Match Component */}
+      {editingMatchDetails && (
+        <MatchEditForm
+          match={editingMatchDetails}
+          categories={categories}
+          onClose={() => setEditingMatchDetails(null)}
+          afterSubmit={handleMatchEditComplete}
+        />
+      )}
 
       {/* Side Panels */}
       {showAddCategory && (
@@ -1012,153 +1051,6 @@ export default function AdminTournament() {
                   </div>
                 ) : (
                   "Add Match"
-                )}
-              </button>
-            </form>
-          </div>
-        </>
-      )}
-
-      {/* Edit Match Side Panel */}
-      {editingMatchDetails && (
-        <>
-          <div
-            className="overlay"
-            onClick={() => setEditingMatchDetails(null)}
-          />
-          <div className="side-panel">
-            <div className="flex justify-between items-center mb-6">
-              <h2>Edit Match</h2>
-              <button
-                className="btn-icon"
-                onClick={() => setEditingMatchDetails(null)}
-                disabled={isLoading}
-              >
-                {/* Close Icon */}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleEditMatchSubmit}>
-              <input type="hidden" name="_action" value="updateMatch" />
-              <input
-                type="hidden"
-                name="matchId"
-                value={editingMatchDetails.id}
-              />
-              {/* Include category_id (non-editable usually) or fetch if needed */}
-              {/* <input type="hidden" name="categoryId" value={editingMatchDetails.category_id} /> */}
-              <div className="form-group">
-                <label>Category:</label>
-                <p className="font-medium">
-                  {categories.find(
-                    (c) => c.id === editingMatchDetails.category_id
-                  )?.name || "Unknown"}
-                </p>
-              </div>
-              <div className="form-group">
-                <label htmlFor="edit-isPlayoff">Match Type:</label>
-                <select
-                  id="edit-isPlayoff"
-                  name="isPlayoff"
-                  defaultValue={String(editingMatchDetails.is_playoff)}
-                  disabled={isLoading}
-                >
-                  <option value="false">Group Match</option>
-                  <option value="true">Playoff Match</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="edit-groupName">Group/Playoff Name:</label>
-                <input
-                  type="text"
-                  id="edit-groupName"
-                  name="groupName"
-                  defaultValue={editingMatchDetails.group_name || ""}
-                  placeholder="e.g., Group A / FINAL"
-                  disabled={isLoading}
-                />
-                <small>Playoff examples: QUARTER-1, SEMI-2, FINAL</small>
-              </div>
-              <div className="form-group">
-                <label htmlFor="edit-team1">Team 1:</label>
-                <input
-                  type="text"
-                  id="edit-team1"
-                  name="team1"
-                  defaultValue={editingMatchDetails.team1}
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="edit-team2">Team 2:</label>
-                <input
-                  type="text"
-                  id="edit-team2"
-                  name="team2"
-                  defaultValue={editingMatchDetails.team2}
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="edit-date">Date:</label>
-                <input
-                  type="date"
-                  id="edit-date"
-                  name="date"
-                  defaultValue={editingMatchDetails.date}
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="edit-time">Time:</label>
-                <input
-                  type="time"
-                  id="edit-time"
-                  name="time"
-                  defaultValue={editingMatchDetails.time || ""}
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="edit-location">Location:</label>
-                <input
-                  type="text"
-                  id="edit-location"
-                  name="location"
-                  defaultValue={editingMatchDetails.location || ""}
-                  placeholder="Enter match location"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-              <button
-                type="submit"
-                className="btn btn-primary w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <LoadingSpinner size="sm" />
-                    <span className="ml-2">Saving...</span>
-                  </div>
-                ) : (
-                  "Save Changes"
                 )}
               </button>
             </form>
