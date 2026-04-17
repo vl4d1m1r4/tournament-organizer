@@ -82,13 +82,13 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
     // Return category/tournament info even if matches fail?
     return json(
       { category, tournament, matches: [] },
-      { headers: response.headers }
+      { headers: response.headers },
     );
   }
 
   return json(
     { category, tournament, matches: matches || [] },
-    { headers: response.headers }
+    { headers: response.headers },
   );
 };
 
@@ -251,7 +251,7 @@ const GroupMatchesColumn: React.FC<{ matchesByDate: MatchesByDate }> = ({
   matchesByDate,
 }) => {
   const sortedDates = Object.keys(matchesByDate).sort((a, b) =>
-    a.localeCompare(b)
+    a.localeCompare(b),
   );
   const numberOfDays = sortedDates.length;
 
@@ -296,8 +296,8 @@ export default function CategoryOverview() {
     new Set(
       matches
         .filter((match: Match) => !match.is_playoff && match.group_name)
-        .map((match: Match) => match.group_name!)
-    )
+        .map((match: Match) => match.group_name!),
+    ),
   ).sort((a, b) => {
     const aIsLetter = /^[A-Za-z]/.test(a);
     const bIsLetter = /^[A-Za-z]/.test(b);
@@ -335,8 +335,8 @@ export default function CategoryOverview() {
     new Set(
       matches
         .filter((match: Match) => !match.is_playoff && match.date)
-        .map((match: Match) => match.date)
-    )
+        .map((match: Match) => match.date),
+    ),
   ).sort();
 
   const displayDate =
@@ -349,7 +349,7 @@ export default function CategoryOverview() {
       .filter(
         (match: Match) =>
           // match.date === displayDate && // Filter by earliest date only if needed for team list
-          match.group_name === groupFilter && !match.is_playoff
+          match.group_name === groupFilter && !match.is_playoff,
       )
       .forEach((match: Match) => {
         // Exclude playoff placeholder teams
@@ -377,7 +377,7 @@ export default function CategoryOverview() {
         (match: Match) =>
           match.group_name === groupFilter &&
           !match.is_playoff &&
-          match.location
+          match.location,
       )
       .forEach((match: Match) => locations.add(match.location!));
 
@@ -392,7 +392,7 @@ export default function CategoryOverview() {
   const matchesByGroupThenDate: Record<string, MatchesByDate> =
     groupNames.reduce((acc, groupName) => {
       const groupMatches = matches.filter(
-        (match) => match.group_name === groupName && !match.is_playoff
+        (match) => match.group_name === groupName && !match.is_playoff,
       );
 
       const matchesByDate: MatchesByDate = groupMatches.reduce(
@@ -410,7 +410,7 @@ export default function CategoryOverview() {
           });
           return dateAcc;
         },
-        {} as MatchesByDate
+        {} as MatchesByDate,
       );
 
       acc[groupName] = matchesByDate;
@@ -479,14 +479,14 @@ export default function CategoryOverview() {
       {/* Header Bar */}
       <div className="bg-blue-grey-200 py-3 shadow-md w-full z-20">
         <div className="mx-auto flex justify-between px-4 items-center">
-          <img src="/images/rhino_logo.svg" alt="Left Logo" className="w-16" />
+          <img src="/images/bitola.svg" alt="Left Logo" className="h-16" />
           <h1 className="text-xl md:text-xl font-bold text-blue-800 uppercase text-center flex-grow m-0">
             {tournament.name} - {category.name}
           </h1>
           <img
             src="/images/mladost_logo.svg"
             alt="Right Logo"
-            className="w-16"
+            className="h-16"
           />
         </div>
       </div>
@@ -521,7 +521,7 @@ export default function CategoryOverview() {
                     teams={getUniqueTeams(groupName)}
                     location={getUniqueLocation(groupName)}
                   />
-                )
+                ),
               )}
             </div>
           )}
@@ -587,7 +587,7 @@ export default function CategoryOverview() {
                   <GroupMatchesColumn
                     matchesByDate={matchesByGroupThenDate[groupName] || {}}
                   />
-                )
+                ),
               )}
             </div>
 
